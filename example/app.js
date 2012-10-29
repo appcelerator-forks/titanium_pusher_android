@@ -2,11 +2,26 @@
 
 var Pusher = require('com.pusher');
 Pusher.setup({
-  key: '437c8bf5d9d5529460e9',     // CHANGEME
-  appID: '1305',                   // CHANGEME
-  secret: '0750515631c6e8300b03',  // CHANGEME
+  key: '33e9ab34f98fcc05005f',     // CHANGEME
   reconnectAutomaticaly: true
 });
+
+Pusher.setLog( function(x){
+	Ti.API.warn("LOG 1");
+	Ti.API.warn(x);
+	var infoWin = Titanium.UI.createWindow({
+	    backgroundColor: '#FFFFFF',
+	    top: 0,
+	    left: 0,
+	    opacity: 1,
+	    zIndex: 100
+	}); 
+	infoWin.open({modal:true});
+	
+	Ti.API.warn("LOG 2");
+});
+
+Pusher.connect();
 
 var window = Ti.UI.createWindow({
 	backgroundColor:'white',
@@ -78,6 +93,7 @@ Ti.Android.currentActivity.onCreateOptionsMenu = function(e) {
   menu = e.menu;
   var connect = menu.add({title:'Connect', itemId:CONNECT});
   connect.addEventListener('click', handleConnected);
+  
 
   var disconnect = menu.add({title:'Disconnect', itemId:DISCONNECT});
   disconnect.addEventListener('click', handleDisconnected);

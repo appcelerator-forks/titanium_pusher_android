@@ -8,9 +8,13 @@
  */
 package com.pusher;
 
+import java.lang.reflect.Array;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 import org.appcelerator.kroll.KrollDict;
+import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.kroll.common.Log;
@@ -18,23 +22,27 @@ import org.appcelerator.titanium.util.TiConvert;
 
 import org.json.JSONObject;
 
+import com.emorym.android_pusher.Pusher;
+import com.emorym.android_pusher.PusherChannel;
+import com.emorym.android_pusher.PusherLogger;
+
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 
-import com.emorym.android_pusher.Pusher;
+
 
 @Kroll.module(name="Pusher", id="com.pusher")
 public class PusherModule extends KrollModule
 {
 	// private static final boolean DBG = TiConfig.LOGD;
-	private Handler mHandler;
 	public Pusher mPusher;
 	private String mPusherKey;
-	public PusherAPI mPusherAPI;
 	private Boolean mReconnectAutomatically;
-	private Integer mReconnectDelay;
+	private Boolean mEncrypted;
+	//private Integer mReconnectDelay;
+	private KrollFunction mLogger = null;
 
 	// You can define constants with @Kroll.constant, for example:
 	// @Kroll.constant public static final String EXTERNAL_NAME = value;
@@ -57,62 +65,50 @@ public class PusherModule extends KrollModule
 	@Kroll.method
 	public void setup(@SuppressWarnings("rawtypes") HashMap map) {
     @SuppressWarnings("unchecked")
-	  KrollDict args = new KrollDict(map);
+	 	KrollDict args = new KrollDict(map);
 
 		mPusherKey = args.getString("key");
+		mEncrypted = args.optBoolean("encrypted", false);
 		mReconnectAutomatically = args.optBoolean("reconnectAutomatically", true);
-		mReconnectDelay = args.optInt("reconnectDelay", 5);
+		//mReconnectDelay = args.optInt("reconnectDelay", 5);
 		
 		if(mPusherKey == null || mPusherKey.length() == 0) {
 			throw new RuntimeException("Pusher key is required");
 		}
 		
-		String appID = args.optString("appID", null);
-		String secret = args.optString("secret", null);
-		if(appID != null && secret != null) {
-			mPusherAPI = new PusherAPI(mPusherKey, appID, secret);
+		Map<String,Map<String,String>> auth = new HashMap<String,Map<String,String>>();
+		if (args.containsKey("params")){
+			KrollDict kparams = args.getKrollDict("params");
+			Map<String,String> params = new HashMap<String,String>();
+			Iterator<String> iter = kparams.keySet().iterator();
+			while (iter.hasNext()){
+				String key = iter.next();
+				String value = kparams.getString(key);
+				params.put(key, value);
+			}
+			auth.put("params",params);
 		}
+		
+		if (args.containsKey("headers")){
+			KrollDict kheaders = args.getKrollDict("headers");
+			Map<String,String> headers = new HashMap<String,String>();	
+			Iterator<String> iter = kheaders.keySet().iterator();
+			while (iter.hasNext()){
+				String key = iter.next();
+				String value = kheaders.getString(key);
+				headers.put(key, value);
+			}
+			auth.put("params",headers);
+		}
+		
+		this.mPusher = new Pusher(mPusherKey, mEncrypted, auth);
+		this.mPusher.setAutoReconnect(mReconnectAutomatically);	
+		
 	}
 	
 	@Kroll.method(runOnUiThread=true)
 	public void connect() {
-		mHandler = new Handler() {
-			public void handleMessage(Message msg) {
-				super.handleMessage(msg);
-				
-				Bundle bundleData = msg.getData();
-				if(bundleData.getString("type").contentEquals("pusher")) {
-					try {
-						JSONObject message = new JSONObject(bundleData.getString("message"));
-						Log.d("Pusher Message", message.toString());
-						
-						if(message.getString("event").equals("connection_established")) {
-							PusherModule.this.fireEvent("connected", null);
-						}
-						
-						if(PusherModule.this.hasListeners(message.getString("event"))) {
-							KrollDict event = new KrollDict();
-							event.put("name", message.getString("event"));
-							
-							JSONObject data = new JSONObject(message.getString("data"));
-							event.put("data", KrollDict.fromJSON(data));
-							
-							PusherModule.this.fireEvent(message.getString("event"), event);
-						}
-					} catch(Exception e) {
-						e.printStackTrace();
-					}
-				}
-				
-				if(bundleData.getString("type").contentEquals("pusher:disconnected")) {
-					PusherModule.this.fireEvent("disconnected", null);
-				}
-			}
-		};
-		
-		mPusher = new Pusher(mReconnectAutomatically, mReconnectDelay);
-		mPusher.addHandler(mHandler);
-		mPusher.connect(mPusherKey);
+		this.mPusher.connect();
 	}
 	
 	@Kroll.method(runOnUiThread=true)
@@ -123,21 +119,32 @@ public class PusherModule extends KrollModule
 	}
 	
 	@Kroll.method(runOnUiThread=true)
-	public ChannelProxy subscribeChannel(String channel) {
-		ChannelProxy channelProxy = new ChannelProxy();
-		channelProxy.configure(this, channel);
-		
-		return channelProxy;
+	public void subscribeChannel(String channelName) {
+		PusherChannel channel = mPusher.subscribe(channelName);
+//		ChannelProxy channelProxy = new ChannelProxy();
+//		channelProxy.configure(this, channel);
+//		
+//		return channelProxy;
 	}
+	
 	
 	@Kroll.method
 	public void sendEvent(String eventName, String channelName, Object data) throws org.json.JSONException {
-    JSONObject jsonData = new JSONObject(TiConvert.toString(data));
-
-		if(mPusherAPI != null) {
-			mPusherAPI.triggerEvent(eventName, channelName, jsonData, mPusher.mSocketId);
-		} else {
-			Log.w("Pusher", "PusherAPI not configured because of missing appID or secret");
-		}
+		JSONObject eventData = new JSONObject(TiConvert.toString(data));
+		mPusher.sendEvent(eventName, eventData, channelName);
 	}
+	
+	@Kroll.setProperty @Kroll.method
+	public void setLog(final KrollFunction customLogger){
+		mLogger = customLogger;
+		mPusher.setLogger(new PusherLogger(){
+			@Override
+			public void log(String message){
+				Object[] arg = new Object[1];
+				arg[0] = message;
+				mLogger.call(getKrollObject(), arg);
+			}
+		});			
+	}
+	
 }

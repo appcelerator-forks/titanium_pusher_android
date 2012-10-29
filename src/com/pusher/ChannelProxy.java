@@ -57,23 +57,23 @@ public class ChannelProxy extends KrollProxy
 				}
 			}
 		};
-		mPusherModule.mPusher.addHandler(mHandler);
+//		mPusherModule.mPusher.addHandler(mHandler);
 	}
 	
 	@Kroll.method(runOnUiThread=true)
 	public void unsubscribe() {
-		mPusherModule.mPusher.unsubscribe(channelName);
-		mPusherModule.mPusher.removeHandler(mHandler);
+//		mPusherModule.mPusher.unsubscribe(channelName);
+//		mPusherModule.mPusher.removeHandler(mHandler);
 	}
 	
 	@Kroll.method
 	public void sendEvent(String eventName, Object data) throws org.json.JSONException {
     JSONObject jsonData = new JSONObject(TiConvert.toString(data));
 
-		if(mPusherModule.mPusherAPI != null) {
-			mPusherModule.mPusherAPI.triggerEvent(eventName, channelName, jsonData, mPusherModule.mPusher.mSocketId);
-		} else {
-			Log.w("Pusher", "PusherAPI not configured because of missing appID or secret");
-		}
+//		if(mPusherModule.mPusherAPI != null) {
+//			mPusherModule.mPusherAPI.triggerEvent(eventName, channelName, jsonData, mPusherModule.mPusher.mSocketId);
+//		} else {
+//			Log.w("Pusher", "PusherAPI not configured because of missing appID or secret");
+//		}
 	}
  }

@@ -1,6 +1,6 @@
 package com.emorym.android_pusher;
 
-/*	Copyright (C) 2011 Emory Myers 
+/*	Copyright (C) 2011 Emory Myers
  * 
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -13,275 +13,461 @@ package com.emorym.android_pusher;
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License. 
+ *  
+ *  Contributors: Martin Linkhorst
  */
 
-import java.net.URI;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
+import javax.crypto.Mac;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
+import org.json.JSONException;
 import org.json.JSONObject;
 
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.util.Log;
-import de.roderick.weberknecht.WebSocket;
-import de.roderick.weberknecht.WebSocketConnection;
-import de.roderick.weberknecht.WebSocketEventHandler;
-import de.roderick.weberknecht.WebSocketMessage;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+//import android.util.Log;
 
-public class Pusher
-{
-	private final String VERSION = "1.8.3";
-	private final String HOST = "ws.pusherapp.com";
-	private final int WS_PORT = 80;
-	private final String PREFIX = "ws://";
+public class Pusher implements PusherEventEmitter {
+	private static final String LOG_TAG = "Pusher";
 
-	private WebSocket mWebSocket;
-	private Set<Handler> mHandlers;
-	private Thread mWatchdog; // handles reconnecting
-	public String mSocketId;
-	private Boolean mReconnectAutomatically;
-	private Integer mReconnectDelay;
+	private static final String PUSHER_CLIENT = "android-Android_Pusher";
+	//private static final String VERSION = "1.11.1";
+	private static final String VERSION = "5";
 
-	public Pusher(Boolean reconnectAutomatically, Integer reconnectDelay)
-	{
-		// So we can get our messages back to whatever created this
-		mHandlers = new HashSet<Handler>();
-		channels = new HashMap<String, Channel>();
-		mWebSocket = null;
-		mReconnectAutomatically = reconnectAutomatically;
-		mReconnectDelay = reconnectDelay;
+	protected static final String PUSHER_EVENT_CONNECTION_ESTABLISHED = "pusher:connection_established";
+	protected static final String PUSHER_EVENT_SUBSCRIBE = "pusher:subscribe";
+	protected static final String PUSHER_EVENT_UNSUBSCRIBE = "pusher:unsubscribe";
+
+	private static final String PUSHER_AUTH_ALGORITHM = "HmacSHA256";
+
+	private static final String PUSHER_HOST = "ws.pusherapp.com";
+
+	private static final String WS_SCHEME = "ws://";
+	private static final String WSS_SCHEME = "wss://";
+
+	private static final int WS_PORT = 80;
+	private static final int WSS_PORT = 443;
+
+	private String mPusherKey;
+	private String mPusherSecret;
+	private boolean mEncrypted;
+
+	private String mSocketId;
+	private PusherConnection mConnection = new PusherConnection(this);
+
+	public PusherChannel mGlobalChannel = new PusherChannel("pusher_global_channel");
+	public Map<String, PusherChannel> mLocalChannels = new HashMap<String, PusherChannel>();
+	
+	public String userId = "";
+	private JSONObject userInfo = new JSONObject();
+	//private Map<String,String> userInfo = new HashMap<String, String>();
+	
+	private PusherLogger mLogger = new PusherLogger() {};
+	
+	private String authURL = null;
+	private Map<String, String> auth_headers = new HashMap<String, String>();
+	private Map<String, String> auth_params = new HashMap<String, String>();
+
+//	public Pusher(String pusherKey, String pusherSecret, boolean encrypted) {
+//		init(pusherKey, pusherSecret, encrypted);
+//	}
+//
+//	public Pusher(String pusherKey, String pusherSecret) {
+//		init(pusherKey, pusherSecret, true);
+//	}
+//
+//	public Pusher(String pusherKey, boolean encrypted) {
+//		init(pusherKey, null, encrypted);
+//	}
+//
+//	public Pusher(String pusherKey) {
+//		init(pusherKey, null, true);
+//	}
+	
+	public Pusher(String pusherKey, boolean encrypted, Map<String,Map<String,String>> auth){
+		init(pusherKey, null, encrypted);
+		if (auth.containsKey("headers")){
+			this.auth_headers = auth.get("headers");
+		}
+		if (auth.containsKey("params")){
+			this.auth_params = auth.get("params");
+		}
 	}
 	
-	public void addHandler(Handler mHandler) {
-		mHandlers.add(mHandler);
+	public Pusher(String pusherKey, String authURL, boolean encrypted, Map<String,Map<String,String>> auth){
+		init(pusherKey, null, encrypted);
+		this.authURL = authURL;
+		if (auth.containsKey("headers")){
+			this.auth_headers = auth.get("headers");
+		}
+		if (auth.containsKey("params")){
+			this.auth_params = auth.get("params");
+		}
 	}
 	
-	public void removeHandler(Handler mHandler) {
-		mHandlers.remove(mHandler);
+	private void init(String pusherKey, String pusherSecret, boolean encrypted) {
+		mPusherKey = pusherKey;
+		mPusherSecret = pusherSecret;
+		mEncrypted = encrypted;
 	}
 
-	private class Channel
-	{
-		public String name;
+	public void connect() {
+		mConnection.connect();
+	}
 
-		public Channel(String _name)
-		{
-			name = _name;
+	public boolean isConnected() {
+		return mSocketId != null;
+	}
+
+	public void disconnect() {
+		mConnection.disconnect();
+	}
+
+	public void onConnected(String socketId) {
+		mSocketId = socketId;
+		subscribeToAllChannels();
+	}
+
+	public void onDisconnected() {
+		mSocketId = null;
+	}
+
+	public String getUrl() {
+		return getScheme() + getHost() + ":" + getPort() + getPath();
+	}
+
+	private String getScheme() {
+		return mEncrypted ? WSS_SCHEME : WS_SCHEME;
+	}
+
+	protected String getHost() {
+		return PUSHER_HOST;
+	}
+
+	private int getPort() {
+		return mEncrypted ? WSS_PORT : WS_PORT;
+	}
+
+	private String getPath() {
+		return "/app/" + mPusherKey + "?client=" + PUSHER_CLIENT + "&version=" + VERSION;
+	}
+
+	public void bind(String event, PusherCallback callback) {
+		mGlobalChannel.bind(event, callback);
+	}
+
+	public void bindAll(PusherCallback callback) {
+		mGlobalChannel.bindAll(callback);
+	}
+
+	public void unbind(PusherCallback callback) {
+		mGlobalChannel.unbind(callback);
+	}
+
+	public void unbindAll() {
+		mGlobalChannel.unbindAll();
+	}
+
+	public PusherChannel subscribe(String channelName) {
+		PusherChannel channel = createLocalChannel(channelName);
+		sendSubscribeMessage(channel);
+		return channel;
+	}
+
+	public void unsubscribe(String channelName) {
+		/* TODO: just mark as unsubscribed in order to keep the bindings */
+		PusherChannel channel = removeLocalChannel(channelName);
+
+		if (channel == null)
+			return;
+
+		sendUnsubscribeMessage(channel);
+	}
+
+	public void subscribeToAllChannels() {
+		for (PusherChannel channel : mLocalChannels.values()) {
+			sendSubscribeMessage(channel);
 		}
 	}
 
-	private final HashMap<String, Channel> channels;
-
-	public void disconnect()
-	{
-		try
-		{
-			mWatchdog.interrupt();
-			mWatchdog = null;
-			mWebSocket.close();
-			
-			sendDisconnectedEvent();
+	private void unsubscribeFromAllChannels() {
+		for (PusherChannel channel : mLocalChannels.values()) {
+			sendUnsubscribeMessage(channel);
 		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
-		}
-	}
-	
-	private void sendDisconnectedEvent() {
-		Bundle b = new Bundle();
-		b.putString( "type", "pusher:disconnected" );
-		Message msg = new Message();
-		msg.setData( b );
 		
-		for(Handler handler : mHandlers)
-			handler.sendMessage( Message.obtain(msg) );
+		/* TODO: just mark the channels as unsubscribed in order to keep the bindings */ 
+		mLocalChannels.clear();
 	}
 
-	public void subscribe( String channelName )
-	{
-		Channel c = new Channel( channelName );
+	private void sendSubscribeMessage(PusherChannel channel) {
+		if (!isConnected())
+			return;
 
-		if( mWebSocket != null && mWebSocket.isConnected() )
-		{
-			try
-			{
-				sendSubscribeMessage( c );
-			}
-			catch( Exception e )
-			{
-				e.printStackTrace();
-			}
-		}
+		try {
+			String eventName = PUSHER_EVENT_SUBSCRIBE;
 
-		channels.put( channelName, c );
-	}
+			JSONObject eventData = new JSONObject();
+			eventData.put("channel", channel.getName());
 
-	public void unsubscribe( String channelName )
-	{
-		if( channels.containsKey( channelName ) )
-		{
-			if( mWebSocket != null && mWebSocket.isConnected() )
-			{
-				try
-				{
-					sendUnsubscribeMessage( channels.get( channelName ) );
-				}
-				catch( Exception e )
-				{
-					e.printStackTrace();
-				}
-			}
-
-			channels.remove( channelName );
-		}
-	}
-
-	private void subscribeToAllChannels()
-	{
-		try
-		{
-			for( String channelName : channels.keySet() )
-			{
-				sendSubscribeMessage( channels.get( channelName ) );
-			}
-		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
-		}
-	}
-
-	private void sendSubscribeMessage( Channel c )
-	{
-		JSONObject data = new JSONObject();
-
-		send( "pusher:subscribe", data, c.name );
-	}
-
-	private void sendUnsubscribeMessage( Channel c )
-	{
-		JSONObject data = new JSONObject();
-
-		send( "pusher:unsubscribe", data, c.name );
-	}
-
-	public void send( String event_name, JSONObject data, String channel )
-	{
-		JSONObject message = new JSONObject();
-
-		try
-		{
-			data.put( "channel", channel );
-			message.put( "event", event_name );
-			message.put( "data", data );
-			Log.d( "Message", message.toString() );
-			mWebSocket.send( message.toString() );
-		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
-		}
-	}
-
-	public void connect( String application_key )
-	{
-		String path = "/app/" + application_key + "?client=js&version=" + VERSION;
-
-		try
-		{
-			URI url = new URI( PREFIX + HOST + ":" + WS_PORT + path );
-			Log.d( "Connecting", url.toString() );
-			mWebSocket = new WebSocketConnection( url );
-			mWebSocket.setEventHandler( new WebSocketEventHandler()
-			{
-				public void onOpen()
-				{
-					Log.d( "Open", "WebSocket Open" );
-					subscribeToAllChannels();
-				}
-
-				public void onMessage( WebSocketMessage message )
-				{
-					try
-					{
-						Log.d( "Message", message.getText() );
-
-						JSONObject jsonMessage = new JSONObject( message.getText() );
-
-						String event = jsonMessage.optString( "event", null );
-
-						if( event.equals( "pusher:connection_established" ) )
-						{
-							JSONObject data = new JSONObject( jsonMessage.getString( "data" ) );
-
-							mSocketId = data.getString( "socket_id" );
-
-							Log.d( "Connection Established", "Socket Id: " + mSocketId );
-						}
-						else
-						{
-							Bundle b = new Bundle();
-							b.putString( "type", "pusher" );
-							b.putString( "channel", jsonMessage.optString("channel"));
-							b.putString( "message", message.getText() );
-							Message msg = new Message();
-							msg.setData( b );
-							
-							for(Handler handler : mHandlers)
-								handler.sendMessage( Message.obtain(msg) );
-						}
-					}
-					catch( Exception e )
-					{
-						e.printStackTrace();
-					}
-				}
-
-				public void onClose()
-				{
-					Log.d( "Close", "WebSocket Closed" );
-				}
-			} );
 			
-			if(mReconnectAutomatically) {
-				mWatchdog = new Thread( new Runnable()
-				{
-					public void run()
-					{
-						boolean interrupted = false;
-						while (!interrupted)
-						{
-							try
-							{
-								Thread.sleep( Pusher.this.mReconnectDelay * 1000 );
-								if( !mWebSocket.isConnected() ) {
-									Pusher.this.sendDisconnectedEvent();
-									mWebSocket.connect();
-								}
-							}
-							catch( InterruptedException e )
-							{
-								interrupted = true;
-							}
-							catch( Exception e )
-							{
-								e.printStackTrace();
-							}
-						}
-					}
-				} );
-
-				mWatchdog.start();
+			if (channel.isPrivate() || channel.isPresence()){
+				String authString = authenticate(channel);
+				JSONObject authInfo = new JSONObject(authString);
+				Iterator<String> iter = authInfo.keys();
+				while( iter.hasNext() ){
+					String key = iter.next();
+					String value = authInfo.getString(key);
+					eventData.put(key, value);
+				}
 			}
 			
+			sendEvent(eventName, eventData, null);
+
+			//Log.d(LOG_TAG, "subscribed to channel " + channel.getName());
+			mLogger.log(LOG_TAG, "subscribed to channel " + channel.getName());
+		} catch (JSONException e) {
+			mLogger.log(e.toString());
+			//e.printStackTrace();
 		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
+	}
+
+	private void sendUnsubscribeMessage(PusherChannel channel) {
+		if (!isConnected())
+			return;
+
+		try {
+			String eventName = PUSHER_EVENT_UNSUBSCRIBE;
+
+			JSONObject eventData = new JSONObject();
+			eventData.put("channel", channel.getName());
+
+			sendEvent(eventName, eventData, null);
+
+			//Log.d(LOG_TAG, "unsubscribed from channel " + channel.getName());
+			mLogger.log(LOG_TAG, "unsubscribed from channel " + channel.getName());
+		} catch (JSONException e) {
+			mLogger.log(e.toString());
+			//e.printStackTrace();
 		}
+	}
+
+	public void sendEvent(String eventName, JSONObject eventData, String channelName) {
+		mConnection.send(eventName, eventData, channelName);
+	}
+
+	public void dispatchEvents(String eventName, String eventData, String channelName) {
+		mGlobalChannel.dispatchEvents(eventName, eventData);
+
+		PusherChannel localChannel = mLocalChannels.get(channelName);
+		
+		
+		//Log.d( LOG_TAG, mLocalChannels.keySet().toString() );
+
+		if (localChannel == null) {
+			//Log.d(LOG_TAG, "NO channel found");
+			return;
+		}
+		
+		localChannel.dispatchEvents(eventName, eventData);
+	}
+
+	/* TODO: refactor */
+	private String authenticate(PusherChannel channel){
+		
+		if(mPusherKey == null || mPusherKey.length() == 0) {
+			throw new RuntimeException("authentication endpoint URL is required");
+		}
+		
+		String channelName = channel.getName();
+		
+		HttpClient httpclient = new DefaultHttpClient();
+	    HttpPost httppost = new HttpPost(authURL);
+	    
+	    // Add all extra headers to the request
+	    if( !this.auth_headers.isEmpty() ){
+	    	Set<String> keys = this.auth_headers.keySet();
+	    	Iterator<String> iter = keys.iterator();
+			while( iter.hasNext() ){
+				String key = iter.next();
+				String value = this.auth_headers.get(key);
+				httppost.setHeader(key, value);
+			}
+	    }
+		
+	    // Prepare params 
+		List<NameValuePair> namedParams = new ArrayList<NameValuePair>(2);
+		namedParams.add(new BasicNameValuePair( "socket_id", this.mSocketId));
+		namedParams.add(new BasicNameValuePair( "channel_name", channelName));
+		
+		if (channel.isPresence()){
+			namedParams.add(new BasicNameValuePair( "user_id", this.userId));
+			if (this.userInfo.length() > 0){
+				namedParams.add(new BasicNameValuePair( "user_info", this.userInfo.toString()));
+			}
+			//Iterator<Entry<String,String>> iter = this.userInfo.entrySet().iterator();
+			//while(iter.hasNext()){
+			//	Entry<String,String> entry = iter.next();
+			//	namedParams.add(new BasicNameValuePair( entry.getKey(), entry.getValue()));
+			//}
+		}
+		
+		// Add all extra params to the request
+		if (! this.auth_params.isEmpty()){		
+			Set<String> keys = this.auth_params.keySet();
+			Iterator<String> iter = keys.iterator();
+			while( iter.hasNext() ){
+				String key = iter.next();
+				String value = this.auth_params.get(key);
+				namedParams.add(new BasicNameValuePair( key, value));
+			}			
+		}
+		
+		try {
+			httppost.setEntity(new UrlEncodedFormEntity(namedParams));
+		} catch (UnsupportedEncodingException e) {
+			this.log(e.toString());
+		}
+
+		try {
+			HttpResponse response = httpclient.execute(httppost);
+
+			String line = "";
+			StringBuilder total = new StringBuilder();
+			// Wrap a BufferedReader around the InputStream
+			InputStreamReader reader = new InputStreamReader(response.getEntity().getContent());
+			BufferedReader rd = new BufferedReader( reader );
+
+			// Read response until the end
+			while ((line = rd.readLine()) != null) { 
+				total.append(line); 
+			}
+
+			// Return full string
+			return total.toString();
+		} catch (ClientProtocolException e) {
+			this.log(e.toString());
+		} catch (IOException e) {
+			this.log(e.toString());
+		} 
+
+	    return null;
+	}
+	
+	private String authenticateLocal(String channelName){
+		if (!isConnected()) {
+			//Log.e(LOG_TAG, "pusher not connected, can't create auth string");
+			mLogger.log(LOG_TAG, "pusher not connected, can't create auth string");
+			return null;
+		}
+		
+		if (mPusherSecret == null){
+			//Log.e(LOG_TAG, "no Pusher Secret provided, can't authenticate locally");
+			mLogger.log(LOG_TAG, "no Pusher Secret provided, can't authenticate locally");
+			return null;
+		}
+
+		try {
+			String stringToSign = mSocketId + ":" + channelName;
+
+			SecretKey key = new SecretKeySpec(mPusherSecret.getBytes(), PUSHER_AUTH_ALGORITHM);
+
+			Mac mac = Mac.getInstance(PUSHER_AUTH_ALGORITHM);
+			mac.init(key);
+			byte[] signature = mac.doFinal(stringToSign.getBytes());
+
+			StringBuffer sb = new StringBuffer();
+			for (int i = 0; i < signature.length; ++i) {
+				sb.append(Integer.toHexString((signature[i] >> 4) & 0xf));
+				sb.append(Integer.toHexString(signature[i] & 0xf));
+			}
+
+			String authInfo = mPusherKey + ":" + sb.toString();
+
+			//Log.d(LOG_TAG, "Auth Info " + authInfo);
+			mLogger.log(LOG_TAG, "Auth Info " + authInfo);
+
+			return authInfo;
+
+		} catch (NoSuchAlgorithmException e) {
+			mLogger.log(e.toString());
+			//e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			mLogger.log(e.toString());
+			//e.printStackTrace();
+		}
+
+		return null;
+	}
+	
+
+	private PusherChannel createLocalChannel(String channelName) {
+		PusherChannel channel = new PusherChannel(channelName);
+		mLocalChannels.put(channelName, channel);
+		return channel;
+	}
+
+	private PusherChannel removeLocalChannel(String channelName) {
+		return mLocalChannels.remove(channelName);
+	}
+		
+	public PusherConnection connection(){
+		return this.mConnection;
+	}
+	
+	public void setUserInfo( String key, String value) {
+		try {
+			userInfo.put(key, value);
+		} catch (JSONException e) {
+			this.log(e.toString());
+		}
+	}
+	
+	public void delUserInfo( String key ){
+		userInfo.remove(key);
+	}
+	
+	public void setUserId( String value){
+		this.userId = value;
+	}
+	
+	public PusherChannel getChannel(String value){
+		return mLocalChannels.get(value);
+	}
+	
+	public void setLogger(PusherLogger logger){
+		this.mLogger = logger;
+	}
+	
+	public void log(String message){
+		this.mLogger.log(message);
+	}
+	
+	public void setChannelAuthEndpoint(String url){
+		this.authURL = url;
+	}
+	
+	public void setAutoReconnect(Boolean value){
+		this.connection().setAutoReconnect(value);
 	}
 }
