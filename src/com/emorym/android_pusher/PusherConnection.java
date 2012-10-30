@@ -37,7 +37,7 @@ import de.roderick.weberknecht.WebSocketEventHandler;
 import de.roderick.weberknecht.WebSocketException;
 import de.roderick.weberknecht.WebSocketMessage;
 
-class PusherConnection implements PusherEventEmitter {
+public class PusherConnection implements PusherEventEmitter {
 	private static final String LOG_TAG = "PusherConnection";
 
 	public Pusher mPusher;
@@ -288,5 +288,9 @@ class PusherConnection implements PusherEventEmitter {
 	
 	public void setAutoReconnect(boolean value){
 		this.auto_reconnect = value;
+	}
+	
+	public boolean getAutoReconnect(){
+		return this.auto_reconnect;
 	}
 }

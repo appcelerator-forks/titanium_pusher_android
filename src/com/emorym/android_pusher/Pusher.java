@@ -467,7 +467,15 @@ public class Pusher implements PusherEventEmitter {
 		this.authURL = url;
 	}
 	
+	public String getChannelAuthEndpoint(){
+		return this.authURL;
+	}
+	
 	public void setAutoReconnect(Boolean value){
 		this.connection().setAutoReconnect(value);
+	}
+	
+	public boolean getAutoReconnect(){
+		return this.connection().getAutoReconnect();
 	}
 }

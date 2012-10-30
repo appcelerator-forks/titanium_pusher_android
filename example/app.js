@@ -32,6 +32,11 @@ var handleConnected = function() {
   Pusher.connect();
 };
 
+var handleDoStuff = function(){
+	Pusher.subscribeChannel("public-channel");
+	Pusher.getConnection().getState();
+}
+
 var handleDisconnected = function() {
   Pusher.disconnect();
 }
@@ -70,10 +75,14 @@ var handleAlertEvent = function(e) {
 
 var menu;
 var CONNECT = 1, DISCONNECT = 2, ADD = 3;
+var DOSTUFF = 4;
 Ti.Android.currentActivity.onCreateOptionsMenu = function(e) {
   menu = e.menu;
   var connect = menu.add({title:'Connect', itemId:CONNECT});
   connect.addEventListener('click', handleConnected);
+  
+  var do_stuff = menu.add({title:"Do Stuff", itemID:DOSTUFF});
+  do_stuff.addEventListener('click', handleDoStuff);
   
   var disconnect = menu.add({title:'Disconnect', itemId:DISCONNECT});
   disconnect.addEventListener('click', handleDisconnected);
