@@ -14,49 +14,49 @@ import android.os.Message;
 @Kroll.proxy(creatableInModule = PusherModule.class)
 public class ChannelProxy extends KrollProxy
 {
-	private PusherModule mPusherModule;
-	private String channelName;
-	private Handler mHandler;
+//	private PusherModule mPusherModule;
+//	private String channelName;
+//	private Handler mHandler;
 	
 	public ChannelProxy() {
 		super();
 	}
 	
 	public void configure(PusherModule _pusherModule, String _channelName) {
-		mPusherModule = _pusherModule;
-		channelName = _channelName;
+//		mPusherModule = _pusherModule;
+//		channelName = _channelName;
 	
-		mPusherModule.mPusher.subscribe(channelName);
+		//mPusherModule.mPusher.subscribe(channelName);
 		
-		mHandler = new Handler() {
-			public void handleMessage(Message msg) {
-				super.handleMessage(msg);
-				
-				Bundle bundleData = msg.getData();
-				if(bundleData.getString("type").contentEquals("pusher") && bundleData.getString("channel") != null && bundleData.getString("channel").equals(channelName)) {
-					try {
-						JSONObject message = new JSONObject(bundleData.getString("message"));
-						
-						KrollDict event = new KrollDict();
-						event.put("name", message.getString("event"));
-						event.put("channel", message.getString("channel"));
-						
-						JSONObject data = new JSONObject(message.getString("data"));
-						event.put("data", KrollDict.fromJSON(data));
-						
-						if(ChannelProxy.this.hasListeners(message.getString("event"))) {
-							ChannelProxy.this.fireEvent(message.getString("event"), event);
-						}
-						
-						if(ChannelProxy.this.hasListeners("event")) {
-							ChannelProxy.this.fireEvent("event", event);
-						}
-					} catch(Exception e) {
-						e.printStackTrace();
-					}
-				}
-			}
-		};
+//		mHandler = new Handler() {
+//			public void handleMessage(Message msg) {
+//				super.handleMessage(msg);
+//				
+//				Bundle bundleData = msg.getData();
+//				if(bundleData.getString("type").contentEquals("pusher") && bundleData.getString("channel") != null && bundleData.getString("channel").equals(channelName)) {
+//					try {
+//						JSONObject message = new JSONObject(bundleData.getString("message"));
+//						
+//						KrollDict event = new KrollDict();
+//						event.put("name", message.getString("event"));
+//						event.put("channel", message.getString("channel"));
+//						
+//						JSONObject data = new JSONObject(message.getString("data"));
+//						event.put("data", KrollDict.fromJSON(data));
+//						
+//						if(ChannelProxy.this.hasListeners(message.getString("event"))) {
+//							ChannelProxy.this.fireEvent(message.getString("event"), event);
+//						}
+//						
+//						if(ChannelProxy.this.hasListeners("event")) {
+//							ChannelProxy.this.fireEvent("event", event);
+//						}
+//					} catch(Exception e) {
+//						e.printStackTrace();
+//					}
+//				}
+//			}
+//		};
 //		mPusherModule.mPusher.addHandler(mHandler);
 	}
 	

@@ -3,25 +3,23 @@
 var Pusher = require('com.pusher');
 Pusher.setup({
   key: '33e9ab34f98fcc05005f',     // CHANGEME
-  reconnectAutomaticaly: true
+  reconnectAutomaticaly: true,
+  encrypted: true
 });
 
 Pusher.setLog( function(x){
 	Ti.API.warn("LOG 1");
-	Ti.API.warn(x);
-	var infoWin = Titanium.UI.createWindow({
-	    backgroundColor: '#FFFFFF',
-	    top: 0,
-	    left: 0,
-	    opacity: 1,
-	    zIndex: 100
-	}); 
-	infoWin.open({modal:true});
-	
+	alert(x);
 	Ti.API.warn("LOG 2");
 });
 
-Pusher.connect();
+var myEventHandler = function(x){
+	alert("EVENT!");
+};
+
+Pusher.bindAll( myEventHandler );
+
+Pusher.unbind( myEventHandler );
 
 var window = Ti.UI.createWindow({
 	backgroundColor:'white',
@@ -31,27 +29,10 @@ window.open()
 
 // Handlers
 var handleConnected = function() {
-  Pusher.addEventListener('connected', function(e) {
-    Ti.API.warn("PUSHER CONNECTED");
-
-    // Connect to channel
-    window.channel = Pusher.subscribeChannel('test');
-
-    // Bind to all events on this channel
-    window.channel.addEventListener('event', handleEvent);
-
-    // Bind to a specific event on this channel
-    window.channel.addEventListener('alert', handleAlertEvent);
-  });
   Pusher.connect();
 };
 
 var handleDisconnected = function() {
-  if(window.channel) {
-    window.channel.removeEventListener('event', handleEvent);
-    window.channel.removeEventListener('alert', handleAlertEvent);
-  }
-
   Pusher.disconnect();
 }
 
@@ -94,7 +75,6 @@ Ti.Android.currentActivity.onCreateOptionsMenu = function(e) {
   var connect = menu.add({title:'Connect', itemId:CONNECT});
   connect.addEventListener('click', handleConnected);
   
-
   var disconnect = menu.add({title:'Disconnect', itemId:DISCONNECT});
   disconnect.addEventListener('click', handleDisconnected);
 
