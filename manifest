@@ -16,3 +16,4 @@ moduleid: com.pusher
 guid: 58221445-47e3-426f-af05-2f7462ec26b5
 platform: android
 minsdk: 1.8.0.1
+commonjs: true

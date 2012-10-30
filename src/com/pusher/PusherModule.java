@@ -198,12 +198,13 @@ public class PusherModule extends KrollModule {
 
 	// Bind methods
 	@Kroll.method
-	public void bindAll(KrollFunction func) {
+	public long bindAllNative(KrollFunction func) {
 		mGlobalCallbacks.add(func);
+		return uniqueId(func);
 	}
 
 	@Kroll.method
-	public void bind(String event, KrollFunction func) {
+	public long bindNative(String event, KrollFunction func) {
 		/*
 		 * if there are no callbacks for that event assigned yet, initialize the
 		 * list
@@ -214,10 +215,12 @@ public class PusherModule extends KrollModule {
 
 		/* add the callback to the event's callback list */
 		mLocalCallbacks.get(event).add(func);
+		
+		return uniqueId(func);
 	}
 
 	@Kroll.method
-	public void unbindAll() {
+	public void unbindAllNative() {
 		/* remove all callbacks from the global callback list */
 		mGlobalCallbacks.clear();
 		/* remove all local callback lists, that is removes all local callbacks */
@@ -225,24 +228,13 @@ public class PusherModule extends KrollModule {
 	}
 
 	@Kroll.method
-	public void unbind(KrollFunction func) {
-		Log.d("unbind", "func v8 pointer " + ((V8Function) func).getPointer());
-		Log.d("unbind", "func v8 toString " + ((V8Function) func).toString());
-		Log.d("unbind", "func v8 hash " + ((V8Function) func).hashCode());
-		Log.d("unbind", "func v8 native hash "
-				+ ((V8Function) func).getNativeObject().hashCode());
+	public void unbindNative(long uniqueID) {
+			
 		/* remove all matching callbacks from the global callback list */
 		Iterator<KrollFunction> iter = mGlobalCallbacks.iterator();
 		while (iter.hasNext()) {
 			KrollFunction item = iter.next();
-			Log.d("unbind",
-					"item v8 pointer " + ((V8Function) item).getPointer());
-			Log.d("unbind",
-					"item v8 tostring " + ((V8Function) item).toString());
-			Log.d("unbind", "item v8 hash " + ((V8Function) item).hashCode());
-			Log.d("unbind", "item v8 native hash "
-					+ ((V8Function) item).getNativeObject().hashCode());
-			if (compareKrollFunctions(func, item)) {
+			if ( uniqueId(item) == uniqueID) {
 				mGlobalCallbacks.remove(item);
 			}
 		}
@@ -252,7 +244,7 @@ public class PusherModule extends KrollModule {
 			Iterator<KrollFunction> it = localCallbacks.iterator();
 			while (it.hasNext()) {
 				KrollFunction item = it.next();
-				if (compareKrollFunctions(func, item)) {
+				if ( uniqueId(item) == uniqueID) {
 					localCallbacks.remove(item);
 				}
 			}
@@ -260,16 +252,13 @@ public class PusherModule extends KrollModule {
 
 	}
 
-	private boolean compareKrollFunctions(KrollFunction a, KrollFunction b) {
-		if (V8Function.class.isInstance(a) && V8Function.class.isInstance(b)) {
-			return ((V8Function) a).getPointer() == ((V8Function) b)
-					.getPointer();
-		} else if (RhinoFunction.class.isInstance(a)
-				&& RhinoFunction.class.isInstance(b)) {
-			return ((RhinoFunction) a).getFunction() == ((RhinoFunction) b)
-					.getFunction();
+	private long uniqueId(KrollFunction func) {
+		if (V8Function.class.isInstance(func) ) {
+			return ((V8Function) func).getPointer();
+		//} else if (RhinoFunction.class.isInstance(func) ) {
+		//	return (RhinoFunction) func).getFunction();
 		} else {
-			return a.equals(b);
+			return func.hashCode();
 		}
 	}
 

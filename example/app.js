@@ -21,6 +21,8 @@ Pusher.bindAll( myEventHandler );
 
 Pusher.unbind( myEventHandler );
 
+//Pusher.unbindAll();
+
 var window = Ti.UI.createWindow({
 	backgroundColor:'white',
   title: 'Pusher'
@@ -33,8 +35,10 @@ var handleConnected = function() {
 };
 
 var handleDoStuff = function(){
-	Pusher.subscribeChannel("public-channel");
-	Pusher.getConnection().getState();
+	var channel = Pusher.subscribeChannel("public-channel");
+	var connection_state = Pusher.getConnection().getState();
+	alert(connection_state);
+	Pusher.xpto();
 }
 
 var handleDisconnected = function() {

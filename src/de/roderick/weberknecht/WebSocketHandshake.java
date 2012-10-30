@@ -22,7 +22,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 //import org.apache.commons.codec.binary.Base64;
-import android.util.Base64;
+//import android.util.Base64;
+import biz.source_code.base64Coder.Base64Coder;
+
 
 
 public class WebSocketHandshake
@@ -97,7 +99,8 @@ public class WebSocketHandshake
 			nonce[i] = (byte) rand(0, 255);
 		}
 		//return Base64.encodeBase64String(nonce);
-		return Base64.encodeToString(nonce, Base64.DEFAULT);
+		//return Base64.encodeToString(nonce, Base64.DEFAULT);
+		return Base64Coder.encodeLines(nonce);
 	}
 
 	public void verifyServerStatusLine(String statusLine)
