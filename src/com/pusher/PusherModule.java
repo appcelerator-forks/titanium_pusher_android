@@ -8,7 +8,6 @@
  */
 package com.pusher;
 
-//import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -19,11 +18,9 @@ import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.annotations.Kroll;
-//import org.appcelerator.kroll.common.Log;
-//import org.appcelerator.kroll.runtime.rhino.RhinoFunction;
-import org.appcelerator.kroll.runtime.v8.V8Function;
 import org.appcelerator.titanium.util.TiConvert;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -33,12 +30,6 @@ import com.emorym.android_pusher.PusherChannel;
 import com.emorym.android_pusher.PusherConnection;
 import com.emorym.android_pusher.PusherLogger;
 import android.app.Activity;
-//import android.os.Bundle;
-//import android.os.Handler;
-//import android.os.Message;
-//import android.widget.Toast;
-import android.test.suitebuilder.annotation.LargeTest;
-import android.test.suitebuilder.annotation.Suppress;
 
 @Kroll.module(name = "Pusher", id = "com.pusher")
 public class PusherModule extends KrollModule {
@@ -123,6 +114,7 @@ public class PusherModule extends KrollModule {
 
 				// We need to convert eventData to HashMap
 				HashMap<String, String> eventHashData = new HashMap<String, String>();
+				@SuppressWarnings("unchecked")
 				Iterator<String> iter = eventData.keys();
 				while (iter.hasNext()) {
 					String key = iter.next();
@@ -149,9 +141,46 @@ public class PusherModule extends KrollModule {
 				}
 
 			}
+			
+			@Override
+			public void onEvent(String eventName, JSONArray eventData, String channelName) {
+
+				ArrayList<Map<String,String>> eventArrayData = new ArrayList<Map<String,String>>();
+				for( int i = 0; i < eventData.length(); i++){
+					try {
+						JSONObject obj = eventData.getJSONObject(i);
+						HashMap<String,String> data = new HashMap<String, String>();
+						@SuppressWarnings("unchecked")
+						Iterator<String> iter = obj.keys();
+						while(iter.hasNext()){
+							String key = iter.next();
+							data.put(key, obj.getString(key));
+						}
+						eventArrayData.add(data);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+					
+				}
+					
+				Object[] params = { eventName, eventArrayData.toArray(), channelName };
+				
+				for (KrollFunction callback : mGlobalCallbacks) {
+					callback.call(getKrollObject(), params);
+				}
+
+				/* do we have a callback bound to that event? */
+				if (mLocalCallbacks.containsKey(eventName)) {
+					/* execute each callback */
+					for (KrollFunction callback : mLocalCallbacks
+							.get(eventName)) {
+						callback.call(getKrollObject(), params);
+					}
+				}
+			}
 
 		});
-		
+			
 	}
 
 	@Kroll.method(runOnUiThread = true)

@@ -57,10 +57,6 @@ exports.subscribeChannel = function(channelName){
 	return channel;
 }
 
-exports.xpto = function(){
-
-}
-
 
 // Connection class
 function Connection(){
@@ -128,7 +124,6 @@ Object.defineProperty(Connection.prototype, "state", {
 });
 
 exports.connection = new Connection();
-
 
 
 // Channel class

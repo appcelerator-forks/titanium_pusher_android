@@ -48,11 +48,11 @@ public class PusherCallback extends Handler {
 	}
 
 	public void onEvent(String eventName, JSONObject eventData, String channelName) {
-		Log.d(LOG_TAG, "Got event:" + eventName + " on channel:" + channelName + " with data: " + eventData.toString());
+		Log.d(LOG_TAG, "(@Override me!) Got event: " + eventName + " on channel:" + channelName + " with data: " + eventData.toString());
 	}
 	
 	public void onEvent(String eventName, JSONArray eventData, String channelName) {
-		Log.d(LOG_TAG, "Got event:" + eventName + " on channel:" + channelName + " with data: " + eventData.toString());
+		Log.d(LOG_TAG, "(@Override me!) Got event: " + eventName + " on channel:" + channelName + " with data: " + eventData.toString());
 		
 	}
 

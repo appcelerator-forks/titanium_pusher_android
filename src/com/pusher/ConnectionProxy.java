@@ -71,7 +71,7 @@ public class ConnectionProxy extends KrollProxy
 			
 	}
 	
-	@Kroll.getProperty @Kroll.method
+	@Kroll.method
 	public String getState(){
 		return this.mConnection.state();
 	}

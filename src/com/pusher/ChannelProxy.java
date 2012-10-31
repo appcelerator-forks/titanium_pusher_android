@@ -6,11 +6,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-//import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollProxy;
 import org.appcelerator.kroll.annotations.Kroll;
-//import org.appcelerator.kroll.common.Log;
 import org.appcelerator.titanium.util.TiConvert;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,9 +16,6 @@ import org.json.JSONObject;
 import com.emorym.android_pusher.PusherCallback;
 import com.emorym.android_pusher.PusherChannel;
 
-//import android.os.Bundle;
-//import android.os.Handler;
-//import android.os.Message;
 
 @Kroll.proxy(creatableInModule = PusherModule.class)
 public class ChannelProxy extends KrollProxy

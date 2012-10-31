@@ -21,19 +21,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
-
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
@@ -46,7 +39,7 @@ import org.json.JSONObject;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
-//import android.util.Log;
+
 
 public class Pusher implements PusherEventEmitter {
 	private static final String LOG_TAG = "Pusher";
@@ -59,7 +52,7 @@ public class Pusher implements PusherEventEmitter {
 	protected static final String PUSHER_EVENT_SUBSCRIBE = "pusher:subscribe";
 	protected static final String PUSHER_EVENT_UNSUBSCRIBE = "pusher:unsubscribe";
 
-	private static final String PUSHER_AUTH_ALGORITHM = "HmacSHA256";
+	//private static final String PUSHER_AUTH_ALGORITHM = "HmacSHA256";
 
 	private static final String PUSHER_HOST = "ws.pusherapp.com";
 
@@ -70,7 +63,7 @@ public class Pusher implements PusherEventEmitter {
 	private static final int WSS_PORT = 443;
 
 	private String mPusherKey;
-	private String mPusherSecret;
+	//private String mPusherSecret;
 	private boolean mEncrypted;
 
 	private String mSocketId;
@@ -78,10 +71,6 @@ public class Pusher implements PusherEventEmitter {
 
 	public PusherChannel mGlobalChannel = new PusherChannel("pusher_global_channel");
 	public Map<String, PusherChannel> mLocalChannels = new HashMap<String, PusherChannel>();
-	
-	public String userId = "";
-	private JSONObject userInfo = new JSONObject();
-	//private Map<String,String> userInfo = new HashMap<String, String>();
 	
 	private PusherLogger mLogger = new PusherLogger() {};
 	
@@ -128,7 +117,7 @@ public class Pusher implements PusherEventEmitter {
 	
 	private void init(String pusherKey, String pusherSecret, boolean encrypted) {
 		mPusherKey = pusherKey;
-		mPusherSecret = pusherSecret;
+		//mPusherSecret = pusherSecret;
 		mEncrypted = encrypted;
 	}
 
@@ -196,7 +185,6 @@ public class Pusher implements PusherEventEmitter {
 	}
 
 	public void unsubscribe(String channelName) {
-		/* TODO: just mark as unsubscribed in order to keep the bindings */
 		PusherChannel channel = removeLocalChannel(channelName);
 
 		if (channel == null)
@@ -211,12 +199,12 @@ public class Pusher implements PusherEventEmitter {
 		}
 	}
 
+	@SuppressWarnings("unused")
 	private void unsubscribeFromAllChannels() {
 		for (PusherChannel channel : mLocalChannels.values()) {
 			sendUnsubscribeMessage(channel);
 		}
 		
-		/* TODO: just mark the channels as unsubscribed in order to keep the bindings */ 
 		mLocalChannels.clear();
 	}
 
@@ -234,6 +222,7 @@ public class Pusher implements PusherEventEmitter {
 			if (channel.isPrivate() || channel.isPresence()){
 				String authString = authenticate(channel);
 				JSONObject authInfo = new JSONObject(authString);
+				@SuppressWarnings("unchecked")
 				Iterator<String> iter = authInfo.keys();
 				while( iter.hasNext() ){
 					String key = iter.next();
@@ -292,7 +281,6 @@ public class Pusher implements PusherEventEmitter {
 		localChannel.dispatchEvents(eventName, eventData);
 	}
 
-	/* TODO: refactor */
 	private String authenticate(PusherChannel channel){
 		
 		if(mPusherKey == null || mPusherKey.length() == 0) {
@@ -319,18 +307,6 @@ public class Pusher implements PusherEventEmitter {
 		List<NameValuePair> namedParams = new ArrayList<NameValuePair>(2);
 		namedParams.add(new BasicNameValuePair( "socket_id", this.mSocketId));
 		namedParams.add(new BasicNameValuePair( "channel_name", channelName));
-		
-		if (channel.isPresence()){
-			namedParams.add(new BasicNameValuePair( "user_id", this.userId));
-			if (this.userInfo.length() > 0){
-				namedParams.add(new BasicNameValuePair( "user_info", this.userInfo.toString()));
-			}
-			//Iterator<Entry<String,String>> iter = this.userInfo.entrySet().iterator();
-			//while(iter.hasNext()){
-			//	Entry<String,String> entry = iter.next();
-			//	namedParams.add(new BasicNameValuePair( entry.getKey(), entry.getValue()));
-			//}
-		}
 		
 		// Add all extra params to the request
 		if (! this.auth_params.isEmpty()){		
@@ -373,53 +349,53 @@ public class Pusher implements PusherEventEmitter {
 
 	    return null;
 	}
-	
-	private String authenticateLocal(String channelName){
-		if (!isConnected()) {
-			//Log.e(LOG_TAG, "pusher not connected, can't create auth string");
-			mLogger.log(LOG_TAG, "pusher not connected, can't create auth string");
-			return null;
-		}
-		
-		if (mPusherSecret == null){
-			//Log.e(LOG_TAG, "no Pusher Secret provided, can't authenticate locally");
-			mLogger.log(LOG_TAG, "no Pusher Secret provided, can't authenticate locally");
-			return null;
-		}
 
-		try {
-			String stringToSign = mSocketId + ":" + channelName;
+//	private String authenticateLocal(String channelName){
+//		if (!isConnected()) {
+//			//Log.e(LOG_TAG, "pusher not connected, can't create auth string");
+//			mLogger.log(LOG_TAG, "pusher not connected, can't create auth string");
+//			return null;
+//		}
+//		
+//		if (mPusherSecret == null){
+//			//Log.e(LOG_TAG, "no Pusher Secret provided, can't authenticate locally");
+//			mLogger.log(LOG_TAG, "no Pusher Secret provided, can't authenticate locally");
+//			return null;
+//		}
+//
+//		try {
+//			String stringToSign = mSocketId + ":" + channelName;
+//
+//			SecretKey key = new SecretKeySpec(mPusherSecret.getBytes(), PUSHER_AUTH_ALGORITHM);
+//
+//			Mac mac = Mac.getInstance(PUSHER_AUTH_ALGORITHM);
+//			mac.init(key);
+//			byte[] signature = mac.doFinal(stringToSign.getBytes());
+//
+//			StringBuffer sb = new StringBuffer();
+//			for (int i = 0; i < signature.length; ++i) {
+//				sb.append(Integer.toHexString((signature[i] >> 4) & 0xf));
+//				sb.append(Integer.toHexString(signature[i] & 0xf));
+//			}
+//
+//			String authInfo = mPusherKey + ":" + sb.toString();
+//
+//			//Log.d(LOG_TAG, "Auth Info " + authInfo);
+//			mLogger.log(LOG_TAG, "Auth Info " + authInfo);
+//
+//			return authInfo;
+//
+//		} catch (NoSuchAlgorithmException e) {
+//			mLogger.log(e.toString());
+//			//e.printStackTrace();
+//		} catch (InvalidKeyException e) {
+//			mLogger.log(e.toString());
+//			//e.printStackTrace();
+//		}
+//
+//		return null;
+//	}
 
-			SecretKey key = new SecretKeySpec(mPusherSecret.getBytes(), PUSHER_AUTH_ALGORITHM);
-
-			Mac mac = Mac.getInstance(PUSHER_AUTH_ALGORITHM);
-			mac.init(key);
-			byte[] signature = mac.doFinal(stringToSign.getBytes());
-
-			StringBuffer sb = new StringBuffer();
-			for (int i = 0; i < signature.length; ++i) {
-				sb.append(Integer.toHexString((signature[i] >> 4) & 0xf));
-				sb.append(Integer.toHexString(signature[i] & 0xf));
-			}
-
-			String authInfo = mPusherKey + ":" + sb.toString();
-
-			//Log.d(LOG_TAG, "Auth Info " + authInfo);
-			mLogger.log(LOG_TAG, "Auth Info " + authInfo);
-
-			return authInfo;
-
-		} catch (NoSuchAlgorithmException e) {
-			mLogger.log(e.toString());
-			//e.printStackTrace();
-		} catch (InvalidKeyException e) {
-			mLogger.log(e.toString());
-			//e.printStackTrace();
-		}
-
-		return null;
-	}
-	
 
 	private PusherChannel createLocalChannel(String channelName) {
 		PusherChannel channel = new PusherChannel(channelName);
@@ -433,22 +409,6 @@ public class Pusher implements PusherEventEmitter {
 		
 	public PusherConnection connection(){
 		return this.mConnection;
-	}
-	
-	public void setUserInfo( String key, String value) {
-		try {
-			userInfo.put(key, value);
-		} catch (JSONException e) {
-			this.log(e.toString());
-		}
-	}
-	
-	public void delUserInfo( String key ){
-		userInfo.remove(key);
-	}
-	
-	public void setUserId( String value){
-		this.userId = value;
 	}
 	
 	public PusherChannel getChannel(String value){
