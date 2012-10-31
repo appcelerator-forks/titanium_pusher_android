@@ -7,6 +7,8 @@ Pusher.setup({
   encrypted: true
 });
 
+Pusher.channel_auth_endpoint = "http://192.168.2.111:3000/auth/";
+
 Pusher.log = function(x){
 	Ti.API.warn("LOG 1");
 	alert(x);
@@ -39,10 +41,23 @@ var handleConnected = function() {
 };
 
 var handleDoStuff = function(){
-	var channel = Pusher.subscribeChannel("public-channel");
-	channel.bindAll( function(x,y,z){
-		handleEvent(x,y,"public-channel-"+z);
+	var public_channel = Pusher.subscribeChannel("public-channel");
+	public_channel.bindAll( function(x,y,z){
+		handleEvent(x,y,z);
 	})
+	
+	var private_channel = Pusher.subscribeChannel("private-channel");
+	private_channel.bindAll( function(x,y,z){
+		handleEvent(x,y,z);
+	})
+	
+	var presence_channel = Pusher.subscribeChannel("presence-channel");
+	presence_channel.bindAll( function(x,y,z){
+		handleEvent(x,y,z);
+	})
+	
+	//alert(Pusher.channel_auth_endpoint);
+
 	//var connection_state = Pusher.connection.state;
 	//alert(connection_state);
 	//Pusher.connection.bindAll(myEventHandler);

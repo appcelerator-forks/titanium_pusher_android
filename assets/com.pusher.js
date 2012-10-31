@@ -57,6 +57,10 @@ exports.subscribeChannel = function(channelName){
 	return channel;
 }
 
+exports.xpto = function(){
+
+}
+
 
 // Connection class
 function Connection(){
@@ -191,9 +195,10 @@ Object.defineProperty(Channel.prototype, "name", {
 	set: undefined
 });
 
-Object.defineProperty(Channel.prototype, "users", {
+Object.defineProperty(Channel.prototype, "members", {
 	get: function(){
 		return this._channel_proxy.getUsers()
 	},
 	set: undefined
 });
+

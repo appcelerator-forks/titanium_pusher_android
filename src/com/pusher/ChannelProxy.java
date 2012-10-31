@@ -152,7 +152,7 @@ public class ChannelProxy extends KrollProxy
 	}
 	
 	@Kroll.method
-	public Map<String,JSONObject> getUsers(){
+	public Map<String,JSONObject> getMembers(){
 		return this.mChannel.getUsers();
 	}
 	

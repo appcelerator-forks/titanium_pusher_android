@@ -260,13 +260,13 @@ public class PusherModule extends KrollModule {
 
 	@Kroll.setProperty
 	@Kroll.method
-	public void setChannelAuthEndpoint(String url) {
+	public void setChannel_auth_endpoint(String url) {
 		this.mPusher.setChannelAuthEndpoint(url);
 	}
 
 	@Kroll.getProperty
 	@Kroll.method
-	public String getChannelAuthEndpoint() {
+	public String getChannel_auth_endpoint() {
 		return this.mPusher.getChannelAuthEndpoint();
 	}
 
