@@ -19,8 +19,8 @@ import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.annotations.Kroll;
-import org.appcelerator.kroll.common.Log;
-import org.appcelerator.kroll.runtime.rhino.RhinoFunction;
+//import org.appcelerator.kroll.common.Log;
+//import org.appcelerator.kroll.runtime.rhino.RhinoFunction;
 import org.appcelerator.kroll.runtime.v8.V8Function;
 import org.appcelerator.titanium.util.TiConvert;
 
@@ -37,6 +37,8 @@ import android.app.Activity;
 //import android.os.Handler;
 //import android.os.Message;
 //import android.widget.Toast;
+import android.test.suitebuilder.annotation.LargeTest;
+import android.test.suitebuilder.annotation.Suppress;
 
 @Kroll.module(name = "Pusher", id = "com.pusher")
 public class PusherModule extends KrollModule {
@@ -50,6 +52,8 @@ public class PusherModule extends KrollModule {
 
 	private List<KrollFunction> mGlobalCallbacks = new ArrayList<KrollFunction>();
 	private Map<String, List<KrollFunction>> mLocalCallbacks = new HashMap<String, List<KrollFunction>>();
+	
+	public ConnectionProxy connection;
 
 	// You can define constants with @Kroll.constant, for example:
 	// @Kroll.constant public static final String EXTERNAL_NAME = value;
@@ -70,7 +74,7 @@ public class PusherModule extends KrollModule {
 
 	// Methods
 	@Kroll.method
-	public void setup(@SuppressWarnings("rawtypes") HashMap map) {
+	public void dosetup(@SuppressWarnings("rawtypes") HashMap map) {
 		@SuppressWarnings("unchecked")
 		KrollDict args = new KrollDict(map);
 
@@ -129,8 +133,10 @@ public class PusherModule extends KrollModule {
 					}
 				}
 
+				Object[] params = { eventName, eventHashData, channelName };
+				
 				for (KrollFunction callback : mGlobalCallbacks) {
-					callback.call(getKrollObject(), eventHashData);
+					callback.call(getKrollObject(), params);
 				}
 
 				/* do we have a callback bound to that event? */
@@ -138,18 +144,18 @@ public class PusherModule extends KrollModule {
 					/* execute each callback */
 					for (KrollFunction callback : mLocalCallbacks
 							.get(eventName)) {
-						callback.call(getKrollObject(), eventHashData);
+						callback.call(getKrollObject(), params);
 					}
 				}
 
 			}
 
 		});
-
+		
 	}
 
 	@Kroll.method(runOnUiThread = true)
-	public void connect() {
+	public void doconnect() {
 		this.mPusher.connect();
 	}
 
@@ -200,7 +206,7 @@ public class PusherModule extends KrollModule {
 	@Kroll.method
 	public long bindAllNative(KrollFunction func) {
 		mGlobalCallbacks.add(func);
-		return uniqueId(func);
+		return Helpers.uniqueId(func);
 	}
 
 	@Kroll.method
@@ -216,7 +222,7 @@ public class PusherModule extends KrollModule {
 		/* add the callback to the event's callback list */
 		mLocalCallbacks.get(event).add(func);
 		
-		return uniqueId(func);
+		return Helpers.uniqueId(func);
 	}
 
 	@Kroll.method
@@ -234,7 +240,7 @@ public class PusherModule extends KrollModule {
 		Iterator<KrollFunction> iter = mGlobalCallbacks.iterator();
 		while (iter.hasNext()) {
 			KrollFunction item = iter.next();
-			if ( uniqueId(item) == uniqueID) {
+			if ( Helpers.uniqueId(item) == uniqueID) {
 				mGlobalCallbacks.remove(item);
 			}
 		}
@@ -244,7 +250,7 @@ public class PusherModule extends KrollModule {
 			Iterator<KrollFunction> it = localCallbacks.iterator();
 			while (it.hasNext()) {
 				KrollFunction item = it.next();
-				if ( uniqueId(item) == uniqueID) {
+				if ( Helpers.uniqueId(item) == uniqueID) {
 					localCallbacks.remove(item);
 				}
 			}
@@ -252,15 +258,6 @@ public class PusherModule extends KrollModule {
 
 	}
 
-	private long uniqueId(KrollFunction func) {
-		if (V8Function.class.isInstance(func) ) {
-			return ((V8Function) func).getPointer();
-		//} else if (RhinoFunction.class.isInstance(func) ) {
-		//	return (RhinoFunction) func).getFunction();
-		} else {
-			return func.hashCode();
-		}
-	}
 
 	@Kroll.setProperty
 	@Kroll.method
@@ -286,7 +283,7 @@ public class PusherModule extends KrollModule {
 		return this.mPusher.getAutoReconnect();
 	}
 
-	@Kroll.getProperty
+	//@Kroll.getProperty
 	@Kroll.method(runOnUiThread=true)
 	public ConnectionProxy getConnection() {
 		PusherConnection connection = this.mPusher.connection();
@@ -294,4 +291,5 @@ public class PusherModule extends KrollModule {
 		connection_proxy.configure(this, connection);
 		return connection_proxy;
 	}
+
 }

@@ -7,19 +7,23 @@ Pusher.setup({
   encrypted: true
 });
 
-Pusher.setLog( function(x){
+Pusher.log = function(x){
 	Ti.API.warn("LOG 1");
 	alert(x);
 	Ti.API.warn("LOG 2");
-});
-
-var myEventHandler = function(x){
-	alert("EVENT!");
 };
 
-Pusher.bindAll( myEventHandler );
+var myEventHandler = function(x,y,z){
+	alert(x);
+	alert(y);
+	alert(z);
+};
 
-Pusher.unbind( myEventHandler );
+//Pusher.bindAll( myEventHandler );
+//Pusher.unbind( myEventHandler );
+//Pusher.bind( 'pusher:connection_established', myEventHandler);
+
+//Pusher.connection.bindAll( myEventHandler );
 
 //Pusher.unbindAll();
 
@@ -36,20 +40,21 @@ var handleConnected = function() {
 
 var handleDoStuff = function(){
 	var channel = Pusher.subscribeChannel("public-channel");
-	var connection_state = Pusher.getConnection().getState();
-	alert(connection_state);
-	Pusher.xpto();
+	//var connection_state = Pusher.connection.state;
+	//alert(connection_state);
+	//Pusher.connection.bindAll(myEventHandler);
+	//Pusher.connection.unbindAll();
 }
 
 var handleDisconnected = function() {
   Pusher.disconnect();
 }
 
-var handleEvent = function(e) {
-  Ti.API.warn("ATAO 2");
+var handleEvent = function(x,y,z) {
+  //Ti.API.warn("ATAO 2");
 
   var label = Ti.UI.createLabel({
-    text: "channel:" + e.channel + " event: " + e.name,
+	text: "event: " + x, 
     top: 3,
     left: 10,
     height: '23',
@@ -57,21 +62,37 @@ var handleEvent = function(e) {
   });
 
   var sublabel = Ti.UI.createLabel({
-    text: JSON.stringify(e.data),
+    text: JSON.stringify(y),
     top: 25,
     left: 10,
     height: '15',
     font: {fontSize:12}
   });
 
+  
   var tableViewRow = Ti.UI.createTableViewRow({});
   tableViewRow.add(label);
   tableViewRow.add(sublabel);
+  
+  if (z){}
+    var sublabel2 = Ti.UI.createLabel({
+	  text: JSON.stringify(y),
+	  top: 25,
+	  left: 10,
+	  height: '15',
+	  font: {fontSize:12}
+    });
+    tableViewRow.add(sublabel2);
+  }
 
-  Ti.API.warn("ATAO 2");
+
+  //Ti.API.warn("ATAO 2");
 
   tableview.appendRow(tableViewRow, {animated:true});
 };
+
+Pusher.bindAll(handleEvent);
+Pusher.connection.bindAll(handleEvent);
 
 var handleAlertEvent = function(e) {
   alert(JSON.stringify(e.data));

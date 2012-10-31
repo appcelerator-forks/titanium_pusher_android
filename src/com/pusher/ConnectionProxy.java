@@ -51,15 +51,17 @@ public class ConnectionProxy extends KrollProxy
 					}
 				}
 				
+				Object[] params = { eventName, eventHashData, channelName };
+				
 				for (KrollFunction callback : mGlobalCallbacks) {
-					callback.call(getKrollObject(), eventHashData); 
+					callback.call(getKrollObject(), params); 
 				}
 				
 				/* do we have a callback bound to that event? */
 				if (mLocalCallbacks.containsKey(eventName)) {
 					/* execute each callback */
 					for (KrollFunction callback : mLocalCallbacks.get(eventName)) {
-						callback.call(getKrollObject(), eventHashData); 					
+						callback.call(getKrollObject(), params); 					
 					}
 				}
 				
@@ -73,5 +75,21 @@ public class ConnectionProxy extends KrollProxy
 	public String getState(){
 		return this.mConnection.state();
 	}
+	
+	// Bind methods
+	@Kroll.method
+	public long bindAllNative(KrollFunction func) {
+		mGlobalCallbacks.add(func);
+		return Helpers.uniqueId(func);
+	}
+	
+	@Kroll.method
+	public void unbindAllNative() {
+		/* remove all callbacks from the global callback list */
+		mGlobalCallbacks.clear();
+		/* remove all local callback lists, that is removes all local callbacks */
+		mLocalCallbacks.clear();
+	}
+
 	
 }
