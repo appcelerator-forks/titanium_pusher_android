@@ -17,6 +17,7 @@ import java.util.Map;
 import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollModule;
+import org.appcelerator.kroll.KrollObject;
 import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.titanium.util.TiConvert;
 
@@ -220,14 +221,23 @@ public class PusherModule extends KrollModule {
 	@Kroll.method
 	public void setLog(final KrollFunction customLogger) {
 		mLogger = customLogger;
+		final KrollObject krollobj = getKrollObject();
+		
 		mPusher.setLogger(new PusherLogger() {
+			
 			@Override
 			public void log(String message) {
 				Object[] arg = new Object[1];
 				arg[0] = message;
-				PusherModule.this.mLogger.call(
-						PusherModule.this.getKrollObject(), arg);
+				customLogger.call(
+						krollobj, arg);
 			}
+			
+			@Override
+			public void log(String tag, String message){
+				this.log(tag + ":" + message);
+			}
+			
 		});
 	}
 
