@@ -167,7 +167,7 @@ public class PusherModule extends KrollModule {
 	}
 
 	@Kroll.method(runOnUiThread = true)
-	public ChannelProxy subscribeChannel(String channelName) {
+	public ChannelProxy subscribeChannelNative(String channelName) {
 		PusherChannel channel = mPusher.subscribe(channelName);
 		ChannelProxy channelProxy = new ChannelProxy();
 		channelProxy.configure(this, channel);
@@ -258,7 +258,6 @@ public class PusherModule extends KrollModule {
 
 	}
 
-
 	@Kroll.setProperty
 	@Kroll.method
 	public void setChannelAuthEndpoint(String url) {
@@ -279,11 +278,10 @@ public class PusherModule extends KrollModule {
 
 	@Kroll.getProperty
 	@Kroll.method
-	public boolean setAutoReconnect() {
+	public boolean getAutoReconnect() {
 		return this.mPusher.getAutoReconnect();
 	}
 
-	//@Kroll.getProperty
 	@Kroll.method(runOnUiThread=true)
 	public ConnectionProxy getConnection() {
 		PusherConnection connection = this.mPusher.connection();

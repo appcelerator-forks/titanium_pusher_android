@@ -40,6 +40,9 @@ var handleConnected = function() {
 
 var handleDoStuff = function(){
 	var channel = Pusher.subscribeChannel("public-channel");
+	channel.bindAll( function(x,y,z){
+		handleEvent(x,y,"public-channel-"+z);
+	})
 	//var connection_state = Pusher.connection.state;
 	//alert(connection_state);
 	//Pusher.connection.bindAll(myEventHandler);
@@ -74,17 +77,14 @@ var handleEvent = function(x,y,z) {
   tableViewRow.add(label);
   tableViewRow.add(sublabel);
   
-  if (z){}
-    var sublabel2 = Ti.UI.createLabel({
-	  text: JSON.stringify(y),
-	  top: 25,
+  var sublabel2 = Ti.UI.createLabel({
+	  text: "channel: " + z,
+	  top: 50,
 	  left: 10,
 	  height: '15',
 	  font: {fontSize:12}
-    });
-    tableViewRow.add(sublabel2);
-  }
-
+  });
+  tableViewRow.add(sublabel2);
 
   //Ti.API.warn("ATAO 2");
 

@@ -50,6 +50,13 @@ exports.setup = function(args){
 	exports.connection.setup( this.getConnection() );
 }
 
+exports.subscribeChannel = function(channelName){
+	var channel_proxy = this.subscribeChannelNative(channelName);
+	var channel = new Channel();
+	channel.setup(channel_proxy);
+	return channel;
+}
+
 
 // Connection class
 function Connection(){
@@ -61,11 +68,14 @@ function Connection(){
 		this._connection_proxy = connection_proxy;		
 	}
 	
+	// UNBIND ALL
 	this.unbindAll = function(){
 		this._connection_proxy.unbindAllNative();
 		this._callbacks = [];
 	}
 	
+	
+	// BIND ALL
 	this.bindAll = function(callback){
 		if ('function' !== typeof callback) {
 			throw new Error('bindAll only takes instances of Function');
@@ -75,6 +85,7 @@ function Connection(){
 		this._callbacks.push( { 'callback' : callback, 'id' : uniqueId });
 	}
 	
+	// BIND
 	this.bind = function(event,callback){
 		if ('function' !== typeof callback) {
 			throw new Error('bind only takes instances of Function');
@@ -84,19 +95,26 @@ function Connection(){
 		this._callbacks.push( { 'callback' : callback, 'id' : uniqueId });
 	}
 	
+	// UNBIND
 	this.unbind = function(callback){
-		
+		if (!this._callbacks || this._callbacks.length < 1)
+			var position = -1;
+
+		for (var i = 0, length = this._callbacks.length; i < length; i++) {
+			if (this._callbacks[i].callback === callback)
+			{
+				position = i;
+				break;
+			}
+		}
+
+		if (position < 0) { return; }
+
+		this._connection_proxy.unbindNative(this._callbacks[position].id);
+		this._callbacks.splice(position,1);
 	}
 	
 };
-
-//Object.defineProperty(Connection.prototype, "setup", {
-//	value: function(connection_proxy){
-//		this._connection_proxy = connection_proxy;		
-//		return this
-//	},
-//	enumerable: false	
-//});
 
 Object.defineProperty(Connection.prototype, "state", {
 	get: function(){
@@ -106,3 +124,76 @@ Object.defineProperty(Connection.prototype, "state", {
 });
 
 exports.connection = new Connection();
+
+
+
+// Channel class
+function Channel(){
+	var _callbacks;
+	var _channel_proxy;
+	
+	this.setup = function(channel_proxy){
+		this._channel_proxy = channel_proxy;
+		return this;
+	}
+
+	// UNBIND ALL
+	this.unbindAll = function(){
+		this._channel_proxy.unbindAllNative();
+		this._callbacks = [];
+	}
+	
+	// BIND ALL
+	this.bindAll = function(callback){
+		if ('function' !== typeof callback) {
+			throw new Error('bindAll only takes instances of Function');
+		}
+		var uniqueId = this._channel_proxy.bindAllNative(callback);
+		if (!this._callbacks ) this._callbacks = [];
+		this._callbacks.push( { 'callback' : callback, 'id' : uniqueId });
+	}
+	
+	// BIND
+	this.bind = function(event,callback){
+		if ('function' !== typeof callback) {
+			throw new Error('bind only takes instances of Function');
+		}
+		var uniqueId = this._channel_proxy.bindNative(event, callback);
+		if (!this._callbacks ) this._callbacks = [];
+		this._callbacks.push( { 'callback' : callback, 'id' : uniqueId });
+	}
+	
+	// UNBIND
+	this.unbind = function(callback){
+		if (!this._callbacks || this._callbacks.length < 1)
+			var position = -1;
+
+		for (var i = 0, length = this._callbacks.length; i < length; i++) {
+			if (this._callbacks[i].callback === callback)
+			{
+				position = i;
+				break;
+			}
+		}
+
+		if (position < 0) { return; }
+
+		this._channel_proxy.unbindNative(this._callbacks[position].id);
+		this._callbacks.splice(position,1);
+	}
+	
+};
+
+Object.defineProperty(Channel.prototype, "name", {
+	get: function(){
+		return this._channel_proxy.getName()
+	},
+	set: undefined
+});
+
+Object.defineProperty(Channel.prototype, "users", {
+	get: function(){
+		return this._channel_proxy.getUsers()
+	},
+	set: undefined
+});

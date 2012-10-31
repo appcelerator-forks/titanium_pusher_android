@@ -6,11 +6,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.appcelerator.kroll.KrollDict;
+//import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollProxy;
 import org.appcelerator.kroll.annotations.Kroll;
-import org.appcelerator.kroll.common.Log;
+//import org.appcelerator.kroll.common.Log;
 import org.appcelerator.titanium.util.TiConvert;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,9 +18,9 @@ import org.json.JSONObject;
 import com.emorym.android_pusher.PusherCallback;
 import com.emorym.android_pusher.PusherChannel;
 
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
+//import android.os.Bundle;
+//import android.os.Handler;
+//import android.os.Message;
 
 @Kroll.proxy(creatableInModule = PusherModule.class)
 public class ChannelProxy extends KrollProxy
@@ -58,15 +58,17 @@ public class ChannelProxy extends KrollProxy
 					}
 				}
 				
+				Object[] params = { eventName, eventHashData, channelName };
+				
 				for (KrollFunction callback : mGlobalCallbacks) {
-					callback.call(getKrollObject(), eventHashData); 
+					callback.call(getKrollObject(), params); 
 				}
 				
 				/* do we have a callback bound to that event? */
 				if (mLocalCallbacks.containsKey(eventName)) {
 					/* execute each callback */
 					for (KrollFunction callback : mLocalCallbacks.get(eventName)) {
-						callback.call(getKrollObject(), eventHashData); 					
+						callback.call(getKrollObject(), params); 					
 					}
 				}
 				
@@ -79,7 +81,7 @@ public class ChannelProxy extends KrollProxy
 	
 	@Kroll.method(runOnUiThread=true)
 	public void unsubscribe() {
-		// TODO
+		this.mPusherM.unsubscribeChannel(this.getName());
 	}
 	
 	@Kroll.method
@@ -90,23 +92,29 @@ public class ChannelProxy extends KrollProxy
 
 	// Bind methods
 	@Kroll.method
-	public void bindAll(KrollFunction func){
+	public long bindAllNative(KrollFunction func) {
 		mGlobalCallbacks.add(func);
+		return Helpers.uniqueId(func);
 	}
 	
 	@Kroll.method
-	public void bind(String event, KrollFunction func){
-		/* if there are no callbacks for that event assigned yet, initialize the list */
+	public long bindNative(String event, KrollFunction func) {
+		/*
+		 * if there are no callbacks for that event assigned yet, initialize the
+		 * list
+		 */
 		if (!mLocalCallbacks.containsKey(event)) {
 			mLocalCallbacks.put(event, new ArrayList<KrollFunction>());
 		}
 
 		/* add the callback to the event's callback list */
 		mLocalCallbacks.get(event).add(func);
+		
+		return Helpers.uniqueId(func);
 	}
 	
 	@Kroll.method
-	public void unbindAll(){
+	public void unbindAllNative() {
 		/* remove all callbacks from the global callback list */
 		mGlobalCallbacks.clear();
 		/* remove all local callback lists, that is removes all local callbacks */
@@ -114,16 +122,36 @@ public class ChannelProxy extends KrollProxy
 	}
 	
 	@Kroll.method
-	public void unbind(KrollFunction func){
-		// TODO
+	public void unbindNative(long uniqueID) {
+			
+		/* remove all matching callbacks from the global callback list */
+		Iterator<KrollFunction> iter = mGlobalCallbacks.iterator();
+		while (iter.hasNext()) {
+			KrollFunction item = iter.next();
+			if ( Helpers.uniqueId(item) == uniqueID) {
+				mGlobalCallbacks.remove(item);
+			}
+		}
+
+		/* remove all matching callbacks from each local callback list */
+		for (List<KrollFunction> localCallbacks : mLocalCallbacks.values()) {
+			Iterator<KrollFunction> it = localCallbacks.iterator();
+			while (it.hasNext()) {
+				KrollFunction item = it.next();
+				if ( Helpers.uniqueId(item) == uniqueID) {
+					localCallbacks.remove(item);
+				}
+			}
+		}
+
 	}
 	
-	@Kroll.getProperty @Kroll.method
+	@Kroll.method
 	public String getName(){
 		return this.mChannel.getName();
 	}
 	
-	@Kroll.getProperty @Kroll.method
+	@Kroll.method
 	public Map<String,JSONObject> getUsers(){
 		return this.mChannel.getUsers();
 	}
