@@ -164,18 +164,19 @@ public class PusherModule extends KrollModule {
 					
 				}
 					
-				Object[] params = { eventName, eventArrayData.toArray(), channelName };
+				Object[] global_params = { eventName, eventArrayData.toArray() };
 				
 				for (KrollFunction callback : mGlobalCallbacks) {
-					callback.call(getKrollObject(), params);
+					callback.call(getKrollObject(), global_params);
 				}
 
 				/* do we have a callback bound to that event? */
 				if (mLocalCallbacks.containsKey(eventName)) {
+					Object[] local_params = { eventArrayData.toArray() };
 					/* execute each callback */
 					for (KrollFunction callback : mLocalCallbacks
 							.get(eventName)) {
-						callback.call(getKrollObject(), params);
+						callback.call(getKrollObject(), local_params);
 					}
 				}
 			}

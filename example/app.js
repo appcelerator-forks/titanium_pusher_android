@@ -20,13 +20,13 @@ var myEventHandler = function(x,y,z){
 	alert(z);
 };
 
-//Pusher.bindAll( myEventHandler );
+//Pusher.bind_all( myEventHandler );
 //Pusher.unbind( myEventHandler );
 //Pusher.bind( 'pusher:connection_established', myEventHandler);
 
-//Pusher.connection.bindAll( myEventHandler );
+//Pusher.connection.bind_all( myEventHandler );
 
-//Pusher.unbindAll();
+//Pusher.unbind_all();
 
 var window = Ti.UI.createWindow({
 	backgroundColor:'white',
@@ -41,28 +41,28 @@ var handleConnected = function() {
 
 var handleDoStuff = function(){
 	var public_channel = Pusher.subscribeChannel("public-channel");
-	public_channel.bindAll( function(x,y,z){
-		handleEvent(x,y,z);
+	public_channel.bind_all( function(event, data){
+		handleEvent(event, data, "public-channel");
 	})
 	
-	Pusher.channel_auth_endpoint = "http://192.168.2.111:3000/auth/";
+	Pusher.channel_auth_endpoint = "http://192.168.1.104:3000/auth/";
 	var private_channel = Pusher.subscribeChannel("private-channel");
-	private_channel.bindAll( function(x,y,z){
-		handleEvent(x,y,z);
+	private_channel.bind_all( function(event, data){
+		handleEvent(event, data, "private-channel");
 	})
 	
-	Pusher.channel_auth_endpoint = "http://192.168.2.111:3000/presence_auth/";
+	Pusher.channel_auth_endpoint = "http://192.168.1.104:3000/presence_auth/";
 	var presence_channel = Pusher.subscribeChannel("presence-channel");
-	presence_channel.bindAll( function(x,y,z){
-		handleEvent(x,y,z);
+	presence_channel.bind_all( function(event, data){
+		handleEvent(event, data, "presence-channel");
 	})
 	
 	//alert(Pusher.channel_auth_endpoint);
 
 	//var connection_state = Pusher.connection.state;
 	//alert(connection_state);
-	//Pusher.connection.bindAll(myEventHandler);
-	//Pusher.connection.unbindAll();
+	//Pusher.connection.bind_all(myEventHandler);
+	//Pusher.connection.unbind_all();
 }
 
 var handleDisconnected = function() {
@@ -107,8 +107,12 @@ var handleEvent = function(x,y,z) {
   tableview.appendRow(tableViewRow, {animated:true});
 };
 
-Pusher.bindAll(handleEvent);
-Pusher.connection.bindAll(handleEvent);
+Pusher.bind_all( function(event,data){ 
+	handleEvent(event,data,"Pusher");
+});
+Pusher.connection.bind_all( function(event, data){ 
+	handleEvent(event, data, "PusherConnection")
+});
 
 var handleAlertEvent = function(e) {
   alert(JSON.stringify(e.data));

@@ -51,17 +51,18 @@ public class ConnectionProxy extends KrollProxy
 					}
 				}
 				
-				Object[] params = { eventName, eventHashData, channelName };
+				Object[] global_params = { eventName, eventHashData };
 				
 				for (KrollFunction callback : mGlobalCallbacks) {
-					callback.call(getKrollObject(), params); 
+					callback.call(getKrollObject(), global_params); 
 				}
 				
 				/* do we have a callback bound to that event? */
 				if (mLocalCallbacks.containsKey(eventName)) {
+					Object[] local_params = { eventHashData };
 					/* execute each callback */
 					for (KrollFunction callback : mLocalCallbacks.get(eventName)) {
-						callback.call(getKrollObject(), params); 					
+						callback.call(getKrollObject(), local_params); 					
 					}
 				}
 				

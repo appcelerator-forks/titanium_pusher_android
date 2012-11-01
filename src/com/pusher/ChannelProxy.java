@@ -10,6 +10,7 @@ import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollProxy;
 import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.titanium.util.TiConvert;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -53,20 +54,59 @@ public class ChannelProxy extends KrollProxy
 					}
 				}
 				
-				Object[] params = { eventName, eventHashData, channelName };
+				Object[] global_params = { eventName, eventHashData };
 				
 				for (KrollFunction callback : mGlobalCallbacks) {
-					callback.call(getKrollObject(), params); 
+					callback.call(getKrollObject(), global_params); 
 				}
 				
 				/* do we have a callback bound to that event? */
 				if (mLocalCallbacks.containsKey(eventName)) {
+					Object[] local_params = { eventHashData };
 					/* execute each callback */
 					for (KrollFunction callback : mLocalCallbacks.get(eventName)) {
-						callback.call(getKrollObject(), params); 					
+						callback.call(getKrollObject(), local_params); 					
 					}
 				}
 				
+			}
+			
+			@Override
+			public void onEvent(String eventName, JSONArray eventData, String channelName) {
+
+				ArrayList<Map<String,String>> eventArrayData = new ArrayList<Map<String,String>>();
+				for( int i = 0; i < eventData.length(); i++){
+					try {
+						JSONObject obj = eventData.getJSONObject(i);
+						HashMap<String,String> data = new HashMap<String, String>();
+						@SuppressWarnings("unchecked")
+						Iterator<String> iter = obj.keys();
+						while(iter.hasNext()){
+							String key = iter.next();
+							data.put(key, obj.getString(key));
+						}
+						eventArrayData.add(data);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+					
+				}
+					
+				Object[] global_params = { eventName, eventArrayData.toArray() };
+				
+				for (KrollFunction callback : mGlobalCallbacks) {
+					callback.call(getKrollObject(), global_params);
+				}
+
+				/* do we have a callback bound to that event? */
+				if (mLocalCallbacks.containsKey(eventName)) {
+					Object[] local_params = { eventArrayData.toArray() };
+					/* execute each callback */
+					for (KrollFunction callback : mLocalCallbacks
+							.get(eventName)) {
+						callback.call(getKrollObject(), local_params);
+					}
+				}
 			}
 			
 		});

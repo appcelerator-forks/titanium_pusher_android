@@ -153,6 +153,7 @@ public class PusherConnection implements PusherEventEmitter {
 		}
 		mPusher.onDisconnected();
 		this.changeConnectionState(STATE_DISCONNECTED);
+		Log.d(LOG_TAG, "disconnect was called");
 	}
 
 	public void send(String eventName, JSONObject eventData, String channelName) {

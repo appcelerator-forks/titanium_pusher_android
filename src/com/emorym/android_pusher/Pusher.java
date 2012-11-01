@@ -221,6 +221,10 @@ public class Pusher implements PusherEventEmitter {
 			
 			if (channel.isPrivate() || channel.isPresence()){
 				String authString = authenticate(channel);
+				if(authString == null ) {
+					removeLocalChannel(channel.getName());
+					return;
+				}
 				JSONObject authInfo = new JSONObject(authString);
 				@SuppressWarnings("unchecked")
 				Iterator<String> iter = authInfo.keys();

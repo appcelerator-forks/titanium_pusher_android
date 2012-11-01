@@ -1,7 +1,7 @@
 
-exports.bindAll = function(callback){
+exports.bind_all = function(callback){
 	if ('function' !== typeof callback) {
-		throw new Error('bindAll only takes instances of Function');
+		throw new Error('bind_all only takes instances of Function');
 	}
 	var uniqueId = this.bindAllNative(callback);
 	if (!this._callbacks ) this._callbacks = [];
@@ -35,7 +35,7 @@ exports.unbind = function(callback){
 	this._callbacks.splice(position,1);
 }
 
-exports.unbindAll = function(){
+exports.unbind_all = function(){
 	this.unbindAllNative();
 	this._callbacks = [];
 }
@@ -69,16 +69,16 @@ function Connection(){
 	}
 	
 	// UNBIND ALL
-	this.unbindAll = function(){
+	this.unbind_all = function(){
 		this._connection_proxy.unbindAllNative();
 		this._callbacks = [];
 	}
 	
 	
 	// BIND ALL
-	this.bindAll = function(callback){
+	this.bind_all = function(callback){
 		if ('function' !== typeof callback) {
-			throw new Error('bindAll only takes instances of Function');
+			throw new Error('bind_all only takes instances of Function');
 		}
 		var uniqueId = this._connection_proxy.bindAllNative(callback);
 		if (!this._callbacks ) this._callbacks = [];
@@ -137,15 +137,15 @@ function Channel(){
 	}
 
 	// UNBIND ALL
-	this.unbindAll = function(){
+	this.unbind_all = function(){
 		this._channel_proxy.unbindAllNative();
 		this._callbacks = [];
 	}
 	
 	// BIND ALL
-	this.bindAll = function(callback){
+	this.bind_all = function(callback){
 		if ('function' !== typeof callback) {
-			throw new Error('bindAll only takes instances of Function');
+			throw new Error('bind_all only takes instances of Function');
 		}
 		var uniqueId = this._channel_proxy.bindAllNative(callback);
 		if (!this._callbacks ) this._callbacks = [];
