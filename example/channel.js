@@ -6,7 +6,7 @@ var eventNameField = Ti.UI.createTextField({
   top: 10,
   left: 10,
   right: 10,
-  height: 40,
+  height: 80,
   borderStyle:Titanium.UI.INPUT_BORDERSTYLE_ROUNDED,
   width: 300
 });
@@ -14,10 +14,10 @@ window.add(eventNameField);
 
 var channelNameField = Ti.UI.createTextField({
   hintText: 'Channel name',
-  top: 50,
+  top: 100,
   left: 10,
   right: 10,
-  height: 40,
+  height: 80,
   borderStyle:Titanium.UI.INPUT_BORDERSTYLE_ROUNDED,
   width: 300
 });
@@ -25,10 +25,10 @@ window.add(channelNameField);
 
 var dataField = Ti.UI.createTextField({
   hintText: 'JSON String',
-  top: 90,
+  top: 200,
   left: 10,
   right: 10,
-  height: 40,
+  height: 80,
   borderStyle:Titanium.UI.INPUT_BORDERSTYLE_ROUNDED,
   width: 300
 });
@@ -36,7 +36,7 @@ window.add(dataField);
 
 var submitButton = Ti.UI.createButton({
   title: 'Send',
-  top: 150,
+  top: 300,
   left: 10,
   right: 10,
   width: 300,
