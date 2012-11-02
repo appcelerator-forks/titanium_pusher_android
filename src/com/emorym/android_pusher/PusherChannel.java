@@ -17,12 +17,26 @@ package com.emorym.android_pusher;
  *  Contributors: Martin Linkhorst
  */
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -34,6 +48,7 @@ import android.util.Log;
 public class PusherChannel implements PusherEventEmitter {
 	private static final String LOG_TAG = "PusherChannel";
 
+	private Pusher mPusher;
 	private String mName;
 
 	private List<PusherCallback> mGlobalCallbacks = new ArrayList<PusherCallback>();
@@ -41,7 +56,8 @@ public class PusherChannel implements PusherEventEmitter {
 	
 	private Map<String, JSONObject> mLocalUsers = new HashMap<String, JSONObject>();
 
-	public PusherChannel(String name) {
+	public PusherChannel(Pusher pusher, String name) {
+		mPusher = pusher;
 		mName = name;
 	}
 
@@ -98,7 +114,7 @@ public class PusherChannel implements PusherEventEmitter {
 					users = new JSONArray(eventData);
 				} catch (JSONException e) {
 					users = new JSONArray();
-					e.printStackTrace();
+					//e.printStackTrace();
 				}
 				for (int i =0;  i < users.length(); i++) {			
 					try {
@@ -109,7 +125,7 @@ public class PusherChannel implements PusherEventEmitter {
 							this.mLocalUsers.put(user.getString("user_id"), new JSONObject());
 						}
 					} catch (JSONException e) {
-						e.printStackTrace();
+						//e.printStackTrace();
 					}
 				}
 			} 
@@ -120,7 +136,7 @@ public class PusherChannel implements PusherEventEmitter {
 					JSONObject user_info = user.getJSONObject("user_info");
 					this.mLocalUsers.put(user.getString("user_id"), user_info);
 				} catch (JSONException e) {
-						e.printStackTrace();
+						//e.printStackTrace();
 				}
 				
 			}
@@ -130,7 +146,7 @@ public class PusherChannel implements PusherEventEmitter {
 					user = new JSONObject( eventData );
 					this.mLocalUsers.remove(user.getString("user_id"));
 				} catch (JSONException e) {
-					e.printStackTrace();
+					//e.printStackTrace();
 				}
 			}
 		}
@@ -171,4 +187,95 @@ public class PusherChannel implements PusherEventEmitter {
 		return this.mLocalUsers.get(user_id);
 	}
 	
+	public void subscribe(){
+		
+		new Thread( new Runnable(){
+			
+			public void run() {
+				String channelName = PusherChannel.this.getName();			
+
+				JSONObject eventData = new JSONObject();
+				try {
+					eventData.put("channel", channelName);
+		
+					if ( PusherChannel.this.isPresence() || PusherChannel.this.isPrivate() ){
+						String authString = authenticate(channelName);
+						if ( authString == null ) return;
+						JSONObject authInfo = new JSONObject(authString);
+						@SuppressWarnings("unchecked")
+						Iterator<String> iter = authInfo.keys();
+						while( iter.hasNext() ){
+							String key = iter.next();
+							String value = authInfo.getString(key);
+							eventData.put(key, value);
+						}
+					}
+					
+					mPusher.sendEvent(mPusher.PUSHER_EVENT_SUBSCRIBE, eventData, null);
+				
+				} catch (Exception e) {
+					mPusher.dispatchEvents("pusher:subscription_error", "{ \"message\": \""+ e.toString() +"\" }", null);
+				}
+			}
+			
+			public String authenticate(String channelName){
+				HttpClient httpclient = new DefaultHttpClient();
+			    HttpPost httppost = new HttpPost(mPusher.getChannelAuthEndpoint());
+			    
+			 // Add all extra headers to the request
+			    Map<String, String> auth_headers = mPusher.getAuthHeaders();
+			    if( !auth_headers.isEmpty() ){
+			    	Set<String> keys = auth_headers.keySet();
+			    	Iterator<String> iter = keys.iterator();
+			    	while( iter.hasNext() ){
+			    		String key = iter.next();
+			    		String value = auth_headers.get(key);
+			    		httppost.setHeader(key, value);
+			    	}
+			    }
+			    
+			    // Prepare params 
+				List<NameValuePair> namedParams = new ArrayList<NameValuePair>(2);
+				namedParams.add(new BasicNameValuePair( "socket_id", mPusher.getSocketId() ));
+				namedParams.add(new BasicNameValuePair( "channel_name", channelName));
+			    
+				// Add all extra params to the request
+				Map<String, String> auth_params = mPusher.getAuthParams();
+				if (! auth_params.isEmpty()){		
+					Set<String> keys = auth_params.keySet();
+					Iterator<String> iter = keys.iterator();
+					while( iter.hasNext() ){
+						String key = iter.next();
+						String value = auth_params.get(key);
+						namedParams.add(new BasicNameValuePair( key, value));
+					}			
+				}
+				
+				try {
+					httppost.setEntity(new UrlEncodedFormEntity(namedParams));
+
+					HttpResponse response = httpclient.execute(httppost);
+
+					String line = "";
+					StringBuilder total = new StringBuilder();
+					// Wrap a BufferedReader around the InputStream
+					InputStreamReader reader = new InputStreamReader(response.getEntity().getContent());
+					BufferedReader rd = new BufferedReader( reader );
+
+					// Read response until the end
+					while ((line = rd.readLine()) != null) { 
+						total.append(line); 
+					}
+
+					// Return full string
+					return total.toString();
+				} catch (Exception e) {
+					mPusher.dispatchEvents("pusher:subscription_error", "{ \"message\": \""+ e.toString() +"\" }", null);
+				} 							
+				return null;    
+			}
+			
+		}).start();
+
+	}
 }

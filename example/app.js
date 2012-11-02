@@ -45,13 +45,15 @@ var handleDoStuff = function(){
 		handleEvent(event, data, "public-channel");
 	})
 	
-	Pusher.channel_auth_endpoint = "http://192.168.1.104:3000/auth/";
+	var auth_host = "http://192.168.2.111:3000/";
+	
+	Pusher.channel_auth_endpoint =  auth_host + "auth/";
 	var private_channel = Pusher.subscribeChannel("private-channel");
 	private_channel.bind_all( function(event, data){
 		handleEvent(event, data, "private-channel");
 	})
 	
-	Pusher.channel_auth_endpoint = "http://192.168.1.104:3000/presence_auth/";
+	Pusher.channel_auth_endpoint = auth_host + "presence_auth/";
 	var presence_channel = Pusher.subscribeChannel("presence-channel");
 	presence_channel.bind_all( function(event, data){
 		handleEvent(event, data, "presence-channel");
@@ -70,7 +72,9 @@ var handleDisconnected = function() {
 }
 
 var handleEvent = function(x,y,z) {
-  //Ti.API.warn("ATAO 2");
+  Ti.API.warn(x);
+  Ti.API.warn(JSON.stringify(y));
+  Ti.API.warn(z);
 
   var label = Ti.UI.createLabel({
 	text: "event: " + x, 

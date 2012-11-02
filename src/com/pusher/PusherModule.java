@@ -202,7 +202,6 @@ public class PusherModule extends KrollModule {
 		PusherChannel channel = mPusher.subscribe(channelName);
 		ChannelProxy channelProxy = new ChannelProxy();
 		channelProxy.configure(this, channel);
-
 		return channelProxy;
 	}
 

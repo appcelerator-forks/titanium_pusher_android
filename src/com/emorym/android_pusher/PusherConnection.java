@@ -55,6 +55,8 @@ public class PusherConnection implements PusherEventEmitter {
 	protected static final String CONNECTING_IN = "connecting_in";
 	
 	protected static final long UNAVAILABILITY_CHECK_TIMER = 10000L;
+	protected static final long INACTIVITY_TIMER_TIMEOUT = 120000L;
+	protected static final long INACTIVITY_RESPONSE_TIMEOUT = 30000L;
 	
 	private boolean auto_reconnect = true; 
 
@@ -62,6 +64,7 @@ public class PusherConnection implements PusherEventEmitter {
 	private Map<String, List<PusherCallback>> mLocalCallbacks = new HashMap<String, List<PusherCallback>>();
 	
 	private Timer unavailabilityTimer = new Timer();
+	private Timer inactivityTimer = new Timer();
 
 	public PusherConnection(Pusher pusher) {
 		mPusher = pusher;
@@ -78,8 +81,8 @@ public class PusherConnection implements PusherEventEmitter {
 			mWebSocket.setEventHandler(new WebSocketEventHandler() {
 				public void onOpen() {
 					// Log.d(LOG_TAG, "Successfully opened Websocket");
-					PusherConnection.this
-							.changeConnectionState(STATE_CONNECTED);
+					PusherConnection.this.changeConnectionState(STATE_CONNECTED);
+					resetInactivityTimer();
 				}
 
 				public void onMessage(WebSocketMessage message) {
@@ -112,6 +115,8 @@ public class PusherConnection implements PusherEventEmitter {
 					} catch (JSONException e) {
 						Log.d(LOG_TAG, e.toString());
 					}
+					
+					resetInactivityTimer();
 				}
 
 				public void onClose() {
@@ -123,10 +128,12 @@ public class PusherConnection implements PusherEventEmitter {
 					Log.d(LOG_TAG, "Got a Ping");
 					send("pusher:pong", new JSONObject(), null);
 					changeConnectionState(STATE_CONNECTED);
+					resetInactivityTimer();
 				}
 	            public void onPong() {
 	            	Log.d(LOG_TAG, "Got a Pong");
 	            	changeConnectionState(STATE_CONNECTED);
+	            	resetInactivityTimer();
 	            }
 					
 			});
@@ -154,6 +161,10 @@ public class PusherConnection implements PusherEventEmitter {
 		mPusher.onDisconnected();
 		this.changeConnectionState(STATE_DISCONNECTED);
 		Log.d(LOG_TAG, "disconnect was called");
+		
+		// cancel all the timers
+		this.unavailabilityTimer.cancel();
+		this.inactivityTimer.cancel();
 	}
 
 	public void send(String eventName, JSONObject eventData, String channelName) {
@@ -184,6 +195,8 @@ public class PusherConnection implements PusherEventEmitter {
 		} else {
 			this.connectionUnavailable();
 		}
+		
+		this.resetInactivityTimer();
 	}
 
 	private void changeConnectionState(String state) {
@@ -293,5 +306,20 @@ public class PusherConnection implements PusherEventEmitter {
 	
 	public boolean getAutoReconnect(){
 		return this.auto_reconnect;
+	}
+	
+	private void resetInactivityTimer(){
+		this.inactivityTimer.cancel();
+		this.inactivityTimer = new Timer();
+        this.inactivityTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+            	PusherConnection.this.send("pusher:ping", null, null);
+            }
+        }, INACTIVITY_TIMER_TIMEOUT);
+	}
+	
+	private void startDisconnectTimer(){
+		
 	}
 }

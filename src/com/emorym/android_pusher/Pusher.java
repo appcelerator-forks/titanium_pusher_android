@@ -69,12 +69,12 @@ public class Pusher implements PusherEventEmitter {
 	private String mSocketId;
 	private PusherConnection mConnection = new PusherConnection(this);
 
-	public PusherChannel mGlobalChannel = new PusherChannel("pusher_global_channel");
+	public PusherChannel mGlobalChannel = new PusherChannel(this, "pusher_global_channel");
 	public Map<String, PusherChannel> mLocalChannels = new HashMap<String, PusherChannel>();
 	
 	private PusherLogger mLogger = new PusherLogger() {};
 	
-	private String authURL = null;
+	private String authURL = null; // authentication endpoint 
 	private Map<String, String> auth_headers = new HashMap<String, String>();
 	private Map<String, String> auth_params = new HashMap<String, String>();
 
@@ -180,7 +180,8 @@ public class Pusher implements PusherEventEmitter {
 
 	public PusherChannel subscribe(String channelName) {
 		PusherChannel channel = createLocalChannel(channelName);
-		sendSubscribeMessage(channel);
+		//sendSubscribeMessage(channel);
+		channel.subscribe();
 		return channel;
 	}
 
@@ -195,7 +196,8 @@ public class Pusher implements PusherEventEmitter {
 
 	public void subscribeToAllChannels() {
 		for (PusherChannel channel : mLocalChannels.values()) {
-			sendSubscribeMessage(channel);
+			//sendSubscribeMessage(channel);
+			channel.subscribe();
 		}
 	}
 
@@ -204,50 +206,55 @@ public class Pusher implements PusherEventEmitter {
 		for (PusherChannel channel : mLocalChannels.values()) {
 			sendUnsubscribeMessage(channel);
 		}
-		
 		mLocalChannels.clear();
 	}
 
-	private void sendSubscribeMessage(PusherChannel channel) {
+/*	private boolean sendSubscribeMessage(final PusherChannel channel) {
 		if (!isConnected())
-			return;
+			return false;
 
-		try {
-			String eventName = PUSHER_EVENT_SUBSCRIBE;
+		
+//		new Thread( new Runnable(){
+//			
+//			public void run(){
+				try {
+					String eventName = PUSHER_EVENT_SUBSCRIBE;
 
-			JSONObject eventData = new JSONObject();
-			eventData.put("channel", channel.getName());
+					JSONObject eventData = new JSONObject();
+					eventData.put("channel", channel.getName());
 
-			
-			if (channel.isPrivate() || channel.isPresence()){
-				String authString = authenticate(channel);
-				if(authString == null ) {
-					removeLocalChannel(channel.getName());
-					return;
+
+					if (channel.isPrivate() || channel.isPresence()){
+						String authString = authenticate(channel);
+						JSONObject authInfo = new JSONObject(authString);
+						@SuppressWarnings("unchecked")
+						Iterator<String> iter = authInfo.keys();
+						while( iter.hasNext() ){
+							String key = iter.next();
+							String value = authInfo.getString(key);
+							eventData.put(key, value);
+						}
+					}
+
+					sendEvent(eventName, eventData, null);
+
+					//Log.d(LOG_TAG, "subscribed to channel " + channel.getName());
+					//mLogger.log(LOG_TAG, "subscribed to channel " + channel.getName());
+				} catch (JSONException e) {
+					mLogger.log(e.toString());
+					//return false;
+					//e.printStackTrace();
 				}
-				JSONObject authInfo = new JSONObject(authString);
-				@SuppressWarnings("unchecked")
-				Iterator<String> iter = authInfo.keys();
-				while( iter.hasNext() ){
-					String key = iter.next();
-					String value = authInfo.getString(key);
-					eventData.put(key, value);
-				}
-			}
-			
-			sendEvent(eventName, eventData, null);
+				//return true;
+//			}
+//		});
+		
+		return true;
+	}*/
 
-			//Log.d(LOG_TAG, "subscribed to channel " + channel.getName());
-			mLogger.log(LOG_TAG, "subscribed to channel " + channel.getName());
-		} catch (JSONException e) {
-			mLogger.log(e.toString());
-			//e.printStackTrace();
-		}
-	}
-
-	private void sendUnsubscribeMessage(PusherChannel channel) {
+	private boolean sendUnsubscribeMessage(PusherChannel channel) {
 		if (!isConnected())
-			return;
+			return false;
 
 		try {
 			String eventName = PUSHER_EVENT_UNSUBSCRIBE;
@@ -261,8 +268,11 @@ public class Pusher implements PusherEventEmitter {
 			mLogger.log(LOG_TAG, "unsubscribed from channel " + channel.getName());
 		} catch (JSONException e) {
 			mLogger.log(e.toString());
+			this.dispatchEvents("pusher:unsubscribe_error", null, null);
+			return false;
 			//e.printStackTrace();
 		}
+		return true;
 	}
 
 	public void sendEvent(String eventName, JSONObject eventData, String channelName) {
@@ -285,9 +295,13 @@ public class Pusher implements PusherEventEmitter {
 		localChannel.dispatchEvents(eventName, eventData);
 	}
 
-	private String authenticate(PusherChannel channel){
+/*	private String authenticate(PusherChannel channel){
 		
 		if(mPusherKey == null || mPusherKey.length() == 0) {
+			throw new RuntimeException("app key is required");
+
+		}
+		if(authURL == null || authURL.length() == 0){
 			throw new RuntimeException("authentication endpoint URL is required");
 		}
 		
@@ -352,7 +366,7 @@ public class Pusher implements PusherEventEmitter {
 		} 
 
 	    return null;
-	}
+	}*/
 
 //	private String authenticateLocal(String channelName){
 //		if (!isConnected()) {
@@ -402,7 +416,7 @@ public class Pusher implements PusherEventEmitter {
 
 
 	private PusherChannel createLocalChannel(String channelName) {
-		PusherChannel channel = new PusherChannel(channelName);
+		PusherChannel channel = new PusherChannel(this, channelName);
 		mLocalChannels.put(channelName, channel);
 		return channel;
 	}
@@ -441,5 +455,17 @@ public class Pusher implements PusherEventEmitter {
 	
 	public boolean getAutoReconnect(){
 		return this.connection().getAutoReconnect();
+	}
+	
+	public Map<String,String> getAuthHeaders(){
+		return this.auth_headers;
+	}
+	
+	public Map<String,String> getAuthParams(){
+		return this.auth_params;
+	}
+	
+	public String getSocketId(){
+		return this.mSocketId;
 	}
 }
