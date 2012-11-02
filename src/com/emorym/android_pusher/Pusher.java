@@ -275,8 +275,8 @@ public class Pusher implements PusherEventEmitter {
 		return true;
 	}
 
-	public void sendEvent(String eventName, JSONObject eventData, String channelName) {
-		mConnection.send(eventName, eventData, channelName);
+	public boolean sendEvent(String eventName, JSONObject eventData, String channelName) {
+		return mConnection.send(eventName, eventData, channelName);
 	}
 
 	public void dispatchEvents(String eventName, String eventData, String channelName) {

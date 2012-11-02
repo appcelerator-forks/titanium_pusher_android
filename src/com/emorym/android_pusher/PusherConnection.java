@@ -167,9 +167,9 @@ public class PusherConnection implements PusherEventEmitter {
 		this.inactivityTimer.cancel();
 	}
 
-	public void send(String eventName, JSONObject eventData, String channelName) {
+	public boolean send(String eventName, JSONObject eventData, String channelName) {
 		if (mWebSocket == null)
-			return;
+			return false;
 
 		if (mWebSocket.isConnected()) {
 			try {
@@ -188,15 +188,19 @@ public class PusherConnection implements PusherEventEmitter {
 				Log.d(LOG_TAG, "sent message " + message.toString());
 			} catch (JSONException e) {
 				e.printStackTrace();
+				return false;
 			} catch (WebSocketException e) {
 				//e.printStackTrace();
 				this.connectionUnavailable();
+				return false;
 			}
 		} else {
 			this.connectionUnavailable();
+			return false;
 		}
 		
 		this.resetInactivityTimer();
+		return true;
 	}
 
 	private void changeConnectionState(String state) {

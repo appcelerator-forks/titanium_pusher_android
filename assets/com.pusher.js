@@ -181,6 +181,12 @@ function Channel(){
 		this._callbacks.splice(position,1);
 	}
 	
+	// TRIGGER
+	this.trigger = function(eventName, data){
+		return this._channel_proxy.sendEvent( eventName, data);
+	}
+	
+	
 };
 
 Object.defineProperty(Channel.prototype, "name", {

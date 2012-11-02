@@ -211,10 +211,10 @@ public class PusherModule extends KrollModule {
 	}
 
 	@Kroll.method
-	public void sendEvent(String eventName, String channelName, Object data)
+	public boolean sendEvent(String eventName, String channelName, Object data)
 			throws org.json.JSONException {
 		JSONObject eventData = new JSONObject(TiConvert.toString(data));
-		mPusher.sendEvent(eventName, eventData, channelName);
+		return mPusher.sendEvent(eventName, eventData, channelName);
 	}
 
 	@Kroll.setProperty
