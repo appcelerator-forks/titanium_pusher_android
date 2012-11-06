@@ -8,6 +8,11 @@ Pusher.setup({
 });
 
 
+var public_channel = null;
+var private_channel = null;
+var presence_channel = null;
+
+
 Pusher.log = function(x){
 	Ti.API.warn("LOG 1");
 	alert(x);
@@ -40,21 +45,21 @@ var handleConnected = function() {
 };
 
 var handleDoStuff = function(){
-	var public_channel = Pusher.subscribeChannel("public-channel");
+	public_channel = Pusher.subscribeChannel("public-channel");
 	public_channel.bind_all( function(event, data){
 		handleEvent(event, data, "public-channel");
 	})
 	
-	var auth_host = "http://192.168.2.111:3000/";
+	var auth_host = "http://192.168.1.105:3000/";
 	
 	Pusher.channel_auth_endpoint =  auth_host + "auth/";
-	var private_channel = Pusher.subscribeChannel("private-channel");
+	private_channel = Pusher.subscribeChannel("private-channel");
 	private_channel.bind_all( function(event, data){
 		handleEvent(event, data, "private-channel");
 	})
 	
 	Pusher.channel_auth_endpoint = auth_host + "presence_auth/";
-	var presence_channel = Pusher.subscribeChannel("presence-channel");
+	presence_channel = Pusher.subscribeChannel("presence-channel");
 	presence_channel.bind_all( function(event, data){
 		handleEvent(event, data, "presence-channel");
 	})
@@ -65,7 +70,24 @@ var handleDoStuff = function(){
 	//alert(connection_state);
 	//Pusher.connection.bind_all(myEventHandler);
 	//Pusher.connection.unbind_all();
+	
+	//Pusher.sendEvent( "xpto", "public-channel", {} );
+	//Pusher.sendEvent( "pusher:ping", null, {});
+
 }
+
+var handleDoMoreStuff = function(){
+	
+	presence_channel.members.each( function(member){ logMember( member ) });	
+	
+	logMember( presence_channel.members.getMe());	
+	
+}
+
+var logMember = function(member){
+	Ti.API.warn("MEMBRO!");
+	Ti.API.warn(JSON.stringify(member));
+};
 
 var handleDisconnected = function() {
   Pusher.disconnect();
@@ -125,6 +147,7 @@ var handleAlertEvent = function(e) {
 var menu;
 var CONNECT = 1, DISCONNECT = 2, ADD = 3;
 var DOSTUFF = 4;
+var DOMORESTUFF = 5;
 Ti.Android.currentActivity.onCreateOptionsMenu = function(e) {
   menu = e.menu;
   var connect = menu.add({title:'Connect', itemId:CONNECT});
@@ -132,6 +155,9 @@ Ti.Android.currentActivity.onCreateOptionsMenu = function(e) {
   
   var do_stuff = menu.add({title:"Do Stuff", itemID:DOSTUFF});
   do_stuff.addEventListener('click', handleDoStuff);
+  
+  var do_more_stuff = menu.add({title:"Do More Stuff", itemID:DOMORESTUFF});
+  do_more_stuff.addEventListener('click', handleDoMoreStuff);
   
   var disconnect = menu.add({title:'Disconnect', itemId:DISCONNECT});
   disconnect.addEventListener('click', handleDisconnected);

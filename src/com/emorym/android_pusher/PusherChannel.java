@@ -50,11 +50,13 @@ public class PusherChannel implements PusherEventEmitter {
 
 	private Pusher mPusher;
 	private String mName;
+	
+	private String userId = null;
 
 	private List<PusherCallback> mGlobalCallbacks = new ArrayList<PusherCallback>();
 	private Map<String, List<PusherCallback>> mLocalCallbacks = new HashMap<String, List<PusherCallback>>();
 	
-	private Map<String, JSONObject> mLocalUsers = new HashMap<String, JSONObject>();
+	private Map<String, Map<String,String>> mLocalUsers = new HashMap<String, Map<String,String>>();
 
 	public PusherChannel(Pusher pusher, String name) {
 		mPusher = pusher;
@@ -119,11 +121,27 @@ public class PusherChannel implements PusherEventEmitter {
 				for (int i =0;  i < users.length(); i++) {			
 					try {
 						JSONObject user = users.getJSONObject(i);
+						String user_id = user.getString("user_id");
+						Map<String, String> user_info_map = new HashMap<String, String>();
+						user_info_map.put("user_id", user_id);
+						
 						if (user.has("user_info")){
-							this.mLocalUsers.put(user.getString("user_id"), user.getJSONObject("user_info"));
-						} else {
-							this.mLocalUsers.put(user.getString("user_id"), new JSONObject());
+							JSONObject user_info_json = user.getJSONObject("user_info");
+							Iterator<String> iter = (Iterator<String>) user_info_json.keys();
+							while( iter.hasNext()){
+								String key = iter.next();
+								String value;
+								try {
+									value = user_info_json.getString(key);
+									user_info_map.put(key, value);
+								} catch (JSONException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+							}
 						}
+						this.mLocalUsers.put(user_id, user_info_map);
+
 					} catch (JSONException e) {
 						//e.printStackTrace();
 					}
@@ -133,8 +151,23 @@ public class PusherChannel implements PusherEventEmitter {
 				JSONObject user = null;
 				try {
 					user = new JSONObject( eventData );
-					JSONObject user_info = user.getJSONObject("user_info");
-					this.mLocalUsers.put(user.getString("user_id"), user_info);
+					String user_id = user.getString("user_id");
+					JSONObject user_info_json = user.getJSONObject("user_info");
+					Map<String, String> user_info_map = new HashMap<String, String>();
+					user_info_map.put("user_id", user_id);
+					Iterator<String> iter = (Iterator<String>) user_info_json.keys();
+					while( iter.hasNext()){
+						String key = iter.next();
+						String value;
+						try {
+							value = user_info_json.getString(key);
+							user_info_map.put(key, value);
+						} catch (JSONException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+					this.mLocalUsers.put(user_id, user_info_map);
 				} catch (JSONException e) {
 						//e.printStackTrace();
 				}
@@ -176,14 +209,14 @@ public class PusherChannel implements PusherEventEmitter {
 		return mName;
 	}
 	
-	public Map<String,JSONObject> getUsers(){
+	public Map<String,Map<String,String>> getUsers(){
 		//return new HashMap<String, JSONObject>(this.mLocalUsers);
-		Map<String, JSONObject> users = new HashMap<String, JSONObject>();
-		users.putAll(this.mLocalUsers);
-		return users;
+		//Map<String, JSONObject> users = new HashMap<String, JSONObject>();
+		//users.putAll(this.mLocalUsers);
+		return mLocalUsers;
 	}
 	
-	public JSONObject getUser(String user_id){
+	public Map<String,String> getUser(String user_id){
 		return this.mLocalUsers.get(user_id);
 	}
 	
@@ -209,6 +242,14 @@ public class PusherChannel implements PusherEventEmitter {
 							String value = authInfo.getString(key);
 							eventData.put(key, value);
 						}
+					}
+					
+					
+					
+					if (eventData.has("channel_data")){
+						JSONObject channel_data = new JSONObject( eventData.getString("channel_data") );
+						PusherChannel.this.setUserId(channel_data.getString("user_id"));
+						Log.d("PUSHER_CHANNEL", channel_data.getString("user_id"));
 					}
 					
 					mPusher.sendEvent(mPusher.PUSHER_EVENT_SUBSCRIBE, eventData, null);
@@ -277,5 +318,31 @@ public class PusherChannel implements PusherEventEmitter {
 			
 		}).start();
 
+	}
+	
+	public Map<String,Object> jsonObject2HashMap( JSONObject jobject){
+		Map<String, Object> result = new HashMap<String, Object>();
+		@SuppressWarnings("unchecked")
+		Iterator<String> iter = (Iterator<String>) jobject.keys();
+		while( iter.hasNext()){
+			String key = iter.next();
+			String value;
+			try {
+				value = jobject.getString(key);
+				result.put(key, value);
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return result;
+	}
+	
+	public String getUserId(){
+		return this.userId;
+	}
+	
+	public void setUserId(String id){
+		this.userId = id;
 	}
 }
