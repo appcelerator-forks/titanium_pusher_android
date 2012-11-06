@@ -2,7 +2,7 @@
 # this is your module manifest and used by Titanium
 # during compilation, packaging, distribution, etc.
 #
-version: 0.1
+version: 1.0
 description: Titanium Mobile module for the Pusher.com service
 author: Ruben Fonseca
 license: Specify your license
@@ -15,5 +15,5 @@ name: pusher
 moduleid: com.pusher
 guid: 58221445-47e3-426f-af05-2f7462ec26b5
 platform: android
-minsdk: 1.8.0.1
+minsdk: 2.1.1
 commonjs: true
