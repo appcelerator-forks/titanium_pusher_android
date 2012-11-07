@@ -199,8 +199,6 @@ Object.defineProperty(Channel.prototype, "name", {
 Object.defineProperty(Channel.prototype, "members", {
 	get: function(){
 		return this._channel_proxy.getMembers()
-		//var members = new Members();
-		//members.setup( this._channel_proxy.getUsers() );
 	},
 	set: undefined
 });

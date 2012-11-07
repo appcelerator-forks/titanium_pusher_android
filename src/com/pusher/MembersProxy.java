@@ -8,13 +8,12 @@ import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollProxy;
 import org.appcelerator.kroll.annotations.Kroll;
 
-import android.util.Log;
-
 @Kroll.proxy
 public class MembersProxy extends KrollProxy {
 
 	private ChannelProxy channelProxy = null;
 	private Map<String, Map<String,String>> members = null;
+	
 	
 	public void configure( ChannelProxy channelProxy, Map<String, Map<String,String>> members ){
 		this.channelProxy = channelProxy;
@@ -30,13 +29,19 @@ public class MembersProxy extends KrollProxy {
 	
 	@Kroll.method
 	public KrollDict get(String userId){
-		return new KrollDict(members.get(userId));
+		if (members.containsKey(userId)){
+			KrollDict result = new KrollDict();
+			KrollDict user_info = new KrollDict( members.get(userId));
+			result.put("user_info", user_info);
+			result.put("user_id", userId);
+			return result;
+		}
+		return null;
 	}
 	
 	@Kroll.method
 	@Kroll.getProperty
 	public KrollDict getMe(){
-		Log.d("MembersProxy", this.channelProxy.getUserId());
 		return this.get(this.channelProxy.getUserId());
 	}
 	

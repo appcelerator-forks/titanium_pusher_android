@@ -123,7 +123,7 @@ public class PusherChannel implements PusherEventEmitter {
 						JSONObject user = users.getJSONObject(i);
 						String user_id = user.getString("user_id");
 						Map<String, String> user_info_map = new HashMap<String, String>();
-						user_info_map.put("user_id", user_id);
+						//user_info_map.put("user_id", user_id);
 						
 						if (user.has("user_info")){
 							JSONObject user_info_json = user.getJSONObject("user_info");
@@ -154,7 +154,7 @@ public class PusherChannel implements PusherEventEmitter {
 					String user_id = user.getString("user_id");
 					JSONObject user_info_json = user.getJSONObject("user_info");
 					Map<String, String> user_info_map = new HashMap<String, String>();
-					user_info_map.put("user_id", user_id);
+					//user_info_map.put("user_id", user_id);
 					Iterator<String> iter = (Iterator<String>) user_info_json.keys();
 					while( iter.hasNext()){
 						String key = iter.next();
@@ -210,9 +210,6 @@ public class PusherChannel implements PusherEventEmitter {
 	}
 	
 	public Map<String,Map<String,String>> getUsers(){
-		//return new HashMap<String, JSONObject>(this.mLocalUsers);
-		//Map<String, JSONObject> users = new HashMap<String, JSONObject>();
-		//users.putAll(this.mLocalUsers);
 		return mLocalUsers;
 	}
 	
@@ -320,24 +317,7 @@ public class PusherChannel implements PusherEventEmitter {
 
 	}
 	
-	public Map<String,Object> jsonObject2HashMap( JSONObject jobject){
-		Map<String, Object> result = new HashMap<String, Object>();
-		@SuppressWarnings("unchecked")
-		Iterator<String> iter = (Iterator<String>) jobject.keys();
-		while( iter.hasNext()){
-			String key = iter.next();
-			String value;
-			try {
-				value = jobject.getString(key);
-				result.put(key, value);
-			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		return result;
-	}
-	
+
 	public String getUserId(){
 		return this.userId;
 	}

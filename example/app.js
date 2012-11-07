@@ -50,7 +50,7 @@ var handleDoStuff = function(){
 		handleEvent(event, data, "public-channel");
 	})
 	
-	var auth_host = "http://192.168.1.105:3000/";
+	var auth_host = "http://192.168.1.104:3000/";
 	
 	Pusher.channel_auth_endpoint =  auth_host + "auth/";
 	private_channel = Pusher.subscribeChannel("private-channel");
